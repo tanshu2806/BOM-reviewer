@@ -1,5 +1,7 @@
 import json
 import os
+import shutil
+import time
 import uuid
 from pathlib import Path
 
@@ -9,6 +11,7 @@ from run_check import run
 
 ROOT = Path(__file__).resolve().parent
 OUTPUT_ROOT = ROOT / "ui_outputs"
+OUTPUT_RETENTION_SECONDS = 24 * 60 * 60
 
 SEVERITY_ORDER = {"red": 0, "orange": 1, "yellow": 2, "blue": 3, "green": 4, "grey": 5}
 
@@ -19,12 +22,13 @@ st.markdown(
     """
     <style>
     .main { background: #f5f7fb; }
-    .stApp { background: linear-gradient(180deg, #f4f7fb 0%, #eef4ff 100%); }
+    .stApp { background: linear-gradient(180deg, #f4f7fb 0%, #eef4ff 100%); color: #0b1f33; }
     .block-container { padding-top: 1.5rem; }
-    div[data-testid="stSidebar"] { background: #102a43; }
-    h1, h2, h3 { color: #0b1f33; }
+    div[data-testid="stSidebar"] { background: #e8eef7; }
+    h1, h2, h3, h4, h5, p, label { color: #0b1f33; }
     .metric-card { background: white; border-radius: 12px; padding: 1rem; box-shadow: 0 1px 4px rgba(0,0,0,0.08); }
     .status-pill { padding: 0.3rem 0.7rem; border-radius: 999px; font-weight: 600; }
+    div[data-testid="stFileUploader"] section { background: white; border-color: #d1d5db; }
     </style>
     """,
     unsafe_allow_html=True,
@@ -53,12 +57,49 @@ def load_report(report_path: Path):
         return json.load(fh)
 
 
+def get_output_run_dir(path):
+    candidate = Path(path).resolve()
+    if (
+        candidate.parent == OUTPUT_ROOT.resolve()
+        and candidate.name.startswith(("run_", "sample_run_"))
+    ):
+        return candidate
+    return None
+
+
+def remove_output_run(path):
+    run_dir = get_output_run_dir(path)
+    if run_dir is not None and run_dir.is_dir():
+        shutil.rmtree(run_dir)
+
+
+def cleanup_expired_outputs():
+    OUTPUT_ROOT.mkdir(parents=True, exist_ok=True)
+    latest_downloads = st.session_state.get("latest_downloads", {})
+    if latest_downloads:
+        active_dir = get_output_run_dir(
+            latest_downloads.get("output_dir", latest_downloads["annotated_pdf"])
+        )
+        if active_dir is not None and active_dir.is_dir():
+            os.utime(active_dir, None)
+
+    now = time.time()
+    for path in OUTPUT_ROOT.iterdir():
+        run_dir = get_output_run_dir(path)
+        if run_dir is not None and run_dir.is_dir():
+            if now - run_dir.stat().st_mtime > OUTPUT_RETENTION_SECONDS:
+                shutil.rmtree(run_dir)
+
+
 def count_by_type(issues):
     counts = {}
     for issue in issues:
         key = issue.get("type", "unknown")
         counts[key] = counts.get(key, 0) + 1
     return dict(sorted(counts.items(), key=lambda kv: (-kv[1], kv[0])))
+
+
+cleanup_expired_outputs()
 
 
 def render_summary(report):
@@ -117,6 +158,10 @@ st.subheader("Upload your files")
 upload_widget_version = st.session_state.setdefault("upload_widget_version", 0)
 if st.session_state.get("original_uploads") or st.session_state.get("latest_downloads"):
     if st.button("Clear session"):
+        latest_downloads = st.session_state.get("latest_downloads", {})
+        output_dir = latest_downloads.get("output_dir", latest_downloads.get("annotated_pdf"))
+        if output_dir:
+            remove_output_run(output_dir)
         for key in [
             "original_uploads",
             "latest_downloads",
@@ -200,6 +245,7 @@ if run_check:
             "checked_xlsx": str(checked_xlsx),
             "drawing_name": drawing_file.name,
             "bom_name": bom_file.name,
+            "output_dir": str(out_dir),
         }
 
         st.success("Check completed successfully.")
@@ -222,7 +268,7 @@ if run_check:
                     color = "#4caf50"
 
                 st.markdown(
-                    f"<div style='padding:0.8rem 1rem; border-left:5px solid {color}; background:#fff; border-radius:10px; margin-bottom:0.75rem;'>"
+                    f"<div style='padding:0.8rem 1rem; border-left:5px solid {color}; background:var(--card-background); color:var(--app-text); border-radius:10px; margin-bottom:0.75rem;'>"
                     f"<strong>[{severity}]</strong> {issue.get('message', 'No message provided')}"
                     f"</div>",
                     unsafe_allow_html=True,
@@ -240,7 +286,7 @@ else:
     if sample_drawing.exists() and sample_bom.exists():
         with st.container():
             st.caption("Sample files available in the project: sample_01_drawing.pdf and sample_01_bom.xlsx")
-            if st.button("Quick preview with sample files"):
+            if st.session_state.pop("sample_mode", False) or st.button("Quick preview with sample files"):
                 OUTPUT_ROOT.mkdir(exist_ok=True)
                 run_id = uuid.uuid4().hex[:8]
                 out_dir = OUTPUT_ROOT / f"sample_run_{run_id}"
@@ -260,6 +306,7 @@ else:
                         "checked_xlsx": str(checked_xlsx),
                         "drawing_name": sample_drawing.name,
                         "bom_name": sample_bom.name,
+                        "output_dir": str(out_dir),
                     }
                     st.session_state["original_uploads"] = {
                         "drawing": sample_drawing.name,

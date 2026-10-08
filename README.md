@@ -26,7 +26,7 @@ python run_check.py samples/sample_01_drawing.pdf samples/sample_01_bom.xlsx --o
 streamlit run app.py
 ```
 
-This opens the checker in your browser. Upload a drawing PDF and BOM Excel file, then select **Run BOM Check**. The results and findings appear in the app, with buttons to download the annotated PDF and checked BOM Excel. The UI also includes a sample-data preview. Use **Clear session** to clear the selected uploads and start over.
+This opens the checker in your browser. Upload a drawing PDF and BOM Excel file, then select **Run BOM Check**. The results and findings appear in the app, with buttons to download the annotated PDF and checked BOM Excel. Select **Use sample data** in the sidebar to run the included example pair without uploading files. **Clear session** clears the selected uploads and deletes the current run's generated files. Other run folders expire after 24 hours and are removed the next time the app runs; closing or refreshing the browser does not trigger immediate cleanup.
 
 The app uses a light Streamlit theme configured in `.streamlit/config.toml`. Restart the app after changing Streamlit configuration.
 
