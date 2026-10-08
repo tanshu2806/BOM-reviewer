@@ -106,6 +106,7 @@ python stress_test.py                                          # harder conditio
 ```
 run_check.py            CLI entry point
 .streamlit/config.toml  Streamlit UI theme
+.gitignore              generated outputs and Python caches
 app.py                  Streamlit web UI
 bomcheck/config.json    ALL assumptions (edit here)
 bomcheck/extract.py     drawing (vector + OCR) and BOM readers
@@ -117,3 +118,5 @@ stress_test.py          noisy-wording and heavy-scan tests
 demo/                   example outputs (vector, scanned, unreliable-flagged)
 EVALUATION.md           full evaluation output
 ```
+
+The app creates `ui_outputs/` when it runs. Generated run files, local CLI outputs, and Python cache files are excluded from Git.
