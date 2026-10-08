@@ -8,18 +8,27 @@ Runs **fully offline**. Original files are never modified.
 
 ## Quick start
 
+Install the Python dependencies. Tesseract OCR is additionally required only for scanned PDFs:
+
 ```bash
-pip install -r requirements.txt          # + Tesseract OCR installed on the machine (only needed for scanned PDFs)
+pip install -r requirements.txt
+```
+
+### Run from the command line
+
+```bash
 python run_check.py samples/sample_01_drawing.pdf samples/sample_01_bom.xlsx --out outputs
 ```
 
-### Presentation UI demo
+### Use the Streamlit UI
 
 ```bash
 streamlit run app.py
 ```
 
-This starts a simple web dashboard that lets you upload a drawing PDF and BOM Excel file, run the checker, and download the annotated PDF, Excel output, and JSON report.
+This opens the checker in your browser. Upload a drawing PDF and BOM Excel file, then select **Run BOM Check**. The results and findings appear in the app, with buttons to download the annotated PDF and checked BOM Excel. The UI also includes a sample-data preview. Use **Clear session** to clear the selected uploads and start over.
+
+The app uses a light Streamlit theme configured in `.streamlit/config.toml`. Restart the app after changing Streamlit configuration.
 
 Outputs (in `--out`):
 
@@ -96,6 +105,8 @@ python stress_test.py                                          # harder conditio
 
 ```
 run_check.py            CLI entry point
+.streamlit/config.toml  Streamlit UI theme
+app.py                  Streamlit web UI
 bomcheck/config.json    ALL assumptions (edit here)
 bomcheck/extract.py     drawing (vector + OCR) and BOM readers
 bomcheck/match.py       normalise, match, compare, rules, reliability gate
