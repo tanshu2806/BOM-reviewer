@@ -1,0 +1,180 @@
+{
+  "meta": {
+    "drawing": "C:\\Users\\ASUS\\Downloads\\files\\bomcheck_prototype\\bomcheck_proto\\samples\\sample_01_drawing.pdf",
+    "bom": "C:\\Users\\ASUS\\Downloads\\files\\bomcheck_prototype\\bomcheck_proto\\samples\\sample_01_bom.xlsx",
+    "bom_revision": "B"
+  },
+  "reliability": "HIGH",
+  "reliability_reasons": [],
+  "drawing_revision": "B",
+  "bom_revision": "B",
+  "scanned": false,
+  "completeness": 93.75,
+  "n_drawing_items": 16,
+  "n_bom_rows": 18,
+  "matches": [
+    {
+      "drawing_id": "1",
+      "bom_row": 6,
+      "score": 100.0,
+      "status": "OK"
+    },
+    {
+      "drawing_id": "2",
+      "bom_row": 7,
+      "score": 100.0,
+      "status": "OK"
+    },
+    {
+      "drawing_id": "3",
+      "bom_row": 8,
+      "score": 100.0,
+      "status": "OK"
+    },
+    {
+      "drawing_id": "4",
+      "bom_row": 9,
+      "score": 100.0,
+      "status": "OK"
+    },
+    {
+      "drawing_id": "5",
+      "bom_row": 10,
+      "score": 100.0,
+      "status": "OK"
+    },
+    {
+      "drawing_id": "6",
+      "bom_row": 11,
+      "score": 90.0,
+      "status": "SPEC"
+    },
+    {
+      "drawing_id": "7",
+      "bom_row": 12,
+      "score": 100.0,
+      "status": "OK"
+    },
+    {
+      "drawing_id": "8",
+      "bom_row": 13,
+      "score": 100.0,
+      "status": "OK"
+    },
+    {
+      "drawing_id": "9",
+      "bom_row": 14,
+      "score": 100.0,
+      "status": "OK"
+    },
+    {
+      "drawing_id": "10",
+      "bom_row": 15,
+      "score": 100.0,
+      "status": "OK"
+    },
+    {
+      "drawing_id": "11",
+      "bom_row": 16,
+      "score": 90.5,
+      "status": "OK"
+    },
+    {
+      "drawing_id": "12",
+      "bom_row": null,
+      "score": 0,
+      "status": "MISSING"
+    },
+    {
+      "drawing_id": "13",
+      "bom_row": 17,
+      "score": 100.0,
+      "status": "OK"
+    },
+    {
+      "drawing_id": "14",
+      "bom_row": 18,
+      "score": 100.0,
+      "status": "OK"
+    },
+    {
+      "drawing_id": "15",
+      "bom_row": 19,
+      "score": 100.0,
+      "status": "OK"
+    },
+    {
+      "drawing_id": "16",
+      "bom_row": 20,
+      "score": 100.0,
+      "status": "OK"
+    }
+  ],
+  "issues": [
+    {
+      "type": "spec",
+      "severity": "orange",
+      "message": "Item 6: specification mismatch - dimension: drawing ['200'] vs BOM ['250']",
+      "drawing_id": "6",
+      "drawing_desc": "INLET FLANGE 200 NB CL.150",
+      "page": 0,
+      "bbox": [
+        608.5512084960938,
+        150.89999389648438,
+        1045.782958984375,
+        164.89199829101562
+      ],
+      "bom_row": 11,
+      "bom_desc": "Inlet flange 250 NB Class 150"
+    },
+    {
+      "type": "omission",
+      "severity": "red",
+      "message": "Item 12 'STUD BOLT M20 X 90 WITH 2 NUTS' (qty 16) is on the drawing but has no BOM line",
+      "drawing_id": "12",
+      "drawing_desc": "STUD BOLT M20 X 90 WITH 2 NUTS",
+      "page": 0,
+      "bbox": [
+        608.5512084960938,
+        240.89999389648438,
+        1045.782958984375,
+        254.89199829101562
+      ],
+      "bom_row": null,
+      "bom_desc": null
+    },
+    {
+      "type": "duplicate",
+      "severity": "yellow",
+      "message": "BOM row 23 'Outlet header 219.1 OD x 8 thk' repeats item 2 (already covered by BOM row 7)",
+      "drawing_id": "2",
+      "drawing_desc": "OUTLET HEADER 219.1 OD X 8.0 THK",
+      "page": 0,
+      "bbox": [
+        608.5512084960938,
+        90.9000015258789,
+        1045.782958984375,
+        104.89199829101562
+      ],
+      "bom_row": 23,
+      "bom_desc": "Outlet header 219.1 OD x 8 thk"
+    },
+    {
+      "type": "implied",
+      "severity": "blue",
+      "drawing_id": null,
+      "drawing_desc": null,
+      "page": 0,
+      "bbox": [
+        228.2639923095703,
+        673.289794921875,
+        253.59999084472656,
+        688.2817993164062
+      ],
+      "bom_row": null,
+      "bom_desc": null,
+      "label": "Cladding",
+      "message": "Suggestion (Cladding): the drawing notes imply it, but no matching line was found in the BOM"
+    }
+  ]
+}

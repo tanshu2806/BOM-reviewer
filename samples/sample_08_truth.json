@@ -1,0 +1,148 @@
+{
+  "sample": 8,
+  "drawing_rev": "D",
+  "bom_rev": "C",
+  "renumbered": true,
+  "style_draw": [
+    "Pos",
+    "Description",
+    "Material Spec",
+    "Qty"
+  ],
+  "style_bom": [
+    "Sr. No.",
+    "Item Description",
+    "Material Spec",
+    "Qty",
+    "Unit",
+    "Drg Ref"
+  ],
+  "n_items": 19,
+  "n_bom_rows": 22,
+  "errors": [
+    {
+      "type": "omission",
+      "key": "16",
+      "desc": "Casing plate 3 thk"
+    },
+    {
+      "type": "revision",
+      "key": "revision",
+      "desc": "drawing D vs BOM C"
+    },
+    {
+      "type": "spec",
+      "key": "5",
+      "desc": "Plate, tube support, 10 mm"
+    },
+    {
+      "type": "extra",
+      "key": "Pressure reducing valve, 25 NB",
+      "desc": "Pressure reducing valve, 25 NB"
+    },
+    {
+      "type": "quantity",
+      "key": "15",
+      "desc": "Lifting lug 16 thk",
+      "drawing_qty": 4,
+      "bom_qty": 2
+    }
+  ],
+  "drawing_items": [
+    {
+      "id": "1",
+      "desc": "INLET HEADER 219.1 OD X 8.0 THK",
+      "qty": 1
+    },
+    {
+      "id": "2",
+      "desc": "OUTLET HEADER 219.1 OD X 8.0 THK",
+      "qty": 1
+    },
+    {
+      "id": "3",
+      "desc": "ECONOMISER TUBE 38.1 OD X 3.6 THK",
+      "qty": 112
+    },
+    {
+      "id": "4",
+      "desc": "RETURN BEND 38.1 OD",
+      "qty": 28
+    },
+    {
+      "id": "5",
+      "desc": "TUBE SUPPORT PLATE 12 THK",
+      "qty": 11
+    },
+    {
+      "id": "6",
+      "desc": "INLET FLANGE 200 NB CL.150",
+      "qty": 1
+    },
+    {
+      "id": "7",
+      "desc": "OUTLET FLANGE 200 NB CL.150",
+      "qty": 1
+    },
+    {
+      "id": "8",
+      "desc": "SAFETY VALVE 50 NB",
+      "qty": 1
+    },
+    {
+      "id": "9",
+      "desc": "DRAIN VALVE 25 NB",
+      "qty": 2
+    },
+    {
+      "id": "10",
+      "desc": "VENT VALVE 15 NB",
+      "qty": 1
+    },
+    {
+      "id": "11",
+      "desc": "THERMOWELL 1/2 NPT",
+      "qty": 2
+    },
+    {
+      "id": "12",
+      "desc": "PRESSURE TAPPING 1/2 NB",
+      "qty": 2
+    },
+    {
+      "id": "13",
+      "desc": "GASKET 200 NB CL.150",
+      "qty": 2
+    },
+    {
+      "id": "14",
+      "desc": "STUD BOLT M20 X 90 WITH 2 NUTS",
+      "qty": 16
+    },
+    {
+      "id": "15",
+      "desc": "LIFTING LUG 16 THK",
+      "qty": 4
+    },
+    {
+      "id": "16",
+      "desc": "CASING PLATE 3 THK",
+      "qty": 21
+    },
+    {
+      "id": "17",
+      "desc": "EXPANSION JOINT 600 X 600",
+      "qty": 1
+    },
+    {
+      "id": "18",
+      "desc": "NAME PLATE",
+      "qty": 1
+    },
+    {
+      "id": "19",
+      "desc": "INSPECTION DOOR 300 X 300",
+      "qty": 2
+    }
+  ]
+}

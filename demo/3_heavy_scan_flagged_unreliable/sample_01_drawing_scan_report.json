@@ -1,0 +1,299 @@
+{
+  "meta": {
+    "drawing": "samples_stress_b/sample_01_drawing_scan.pdf",
+    "bom": "samples_stress_b/sample_01_bom.xlsx",
+    "bom_revision": "D"
+  },
+  "reliability": "LOW",
+  "reliability_reasons": [
+    "only 2 parts-table rows were read",
+    "only 5% of BOM lines could be linked to a drawing item (wording/extraction problem?)",
+    "low OCR confidence (52/100)"
+  ],
+  "drawing_revision": null,
+  "bom_revision": "D",
+  "scanned": true,
+  "completeness": 50.0,
+  "n_drawing_items": 2,
+  "n_bom_rows": 20,
+  "matches": [
+    {
+      "drawing_id": "1",
+      "bom_row": null,
+      "score": 0,
+      "status": "MISSING"
+    },
+    {
+      "drawing_id": "2",
+      "bom_row": 7,
+      "score": 90.0,
+      "status": "SPEC"
+    }
+  ],
+  "issues": [
+    {
+      "type": "omission",
+      "severity": "red",
+      "message": "Item 1 'INLET 219.1 00 X 8.0 THK GA' (qty 1) is on the drawing but has no BOM line  [low OCR confidence - verify on sheet]",
+      "drawing_id": "1",
+      "drawing_desc": "INLET 219.1 00 X 8.0 THK GA",
+      "page": 0,
+      "bbox": [
+        609.0675072526928,
+        329.2520152145922,
+        1098.766829022144,
+        348.31877294889273
+      ],
+      "bom_row": null,
+      "bom_desc": null,
+      "low_conf": true
+    },
+    {
+      "type": "spec",
+      "severity": "orange",
+      "message": "Item 2: specification mismatch - dimension: drawing ['0', '6'] vs BOM ['8']",
+      "drawing_id": "2",
+      "drawing_desc": "OUTLET HEADER 219.1 00 x 6.0 THK",
+      "page": 0,
+      "bbox": [
+        609.0675072526928,
+        344.0265460749203,
+        1098.766829022144,
+        363.16272850478816
+      ],
+      "bom_row": 7,
+      "bom_desc": "Header, outlet, 219.1 x 8.0 mm"
+    },
+    {
+      "type": "extra",
+      "severity": "yellow",
+      "message": "BOM row 6 'Header, inlet, 219.1 x 8.0 mm' has no matching item on the drawing (extra, or from another revision)",
+      "drawing_id": null,
+      "drawing_desc": null,
+      "page": null,
+      "bbox": null,
+      "bom_row": 6,
+      "bom_desc": "Header, inlet, 219.1 x 8.0 mm"
+    },
+    {
+      "type": "extra",
+      "severity": "yellow",
+      "message": "BOM row 8 'Tube, economiser, 38.1 x 3.6 mm' has no matching item on the drawing (extra, or from another revision)",
+      "drawing_id": null,
+      "drawing_desc": null,
+      "page": null,
+      "bbox": null,
+      "bom_row": 8,
+      "bom_desc": "Tube, economiser, 38.1 x 3.6 mm"
+    },
+    {
+      "type": "extra",
+      "severity": "yellow",
+      "message": "BOM row 9 'U-bend, 38.1 OD' has no matching item on the drawing (extra, or from another revision)",
+      "drawing_id": null,
+      "drawing_desc": null,
+      "page": null,
+      "bbox": null,
+      "bom_row": 9,
+      "bom_desc": "U-bend, 38.1 OD"
+    },
+    {
+      "type": "extra",
+      "severity": "yellow",
+      "message": "BOM row 10 'Tube support plate 12 thk' has no matching item on the drawing (extra, or from another revision)",
+      "drawing_id": null,
+      "drawing_desc": null,
+      "page": null,
+      "bbox": null,
+      "bom_row": 10,
+      "bom_desc": "Tube support plate 12 thk"
+    },
+    {
+      "type": "extra",
+      "severity": "yellow",
+      "message": "BOM row 11 'Flange, inlet, WNRF, 250 NB, 150#' has no matching item on the drawing (extra, or from another revision)",
+      "drawing_id": null,
+      "drawing_desc": null,
+      "page": null,
+      "bbox": null,
+      "bom_row": 11,
+      "bom_desc": "Flange, inlet, WNRF, 250 NB, 150#"
+    },
+    {
+      "type": "extra",
+      "severity": "yellow",
+      "message": "BOM row 12 'Flange, outlet, WNRF, 200 NB, 150#' has no matching item on the drawing (extra, or from another revision)",
+      "drawing_id": null,
+      "drawing_desc": null,
+      "page": null,
+      "bbox": null,
+      "bom_row": 12,
+      "bom_desc": "Flange, outlet, WNRF, 200 NB, 150#"
+    },
+    {
+      "type": "extra",
+      "severity": "yellow",
+      "message": "BOM row 13 'Safety relief valve, 50 NB' has no matching item on the drawing (extra, or from another revision)",
+      "drawing_id": null,
+      "drawing_desc": null,
+      "page": null,
+      "bbox": null,
+      "bom_row": 13,
+      "bom_desc": "Safety relief valve, 50 NB"
+    },
+    {
+      "type": "extra",
+      "severity": "yellow",
+      "message": "BOM row 14 'Drain valve 25 NB' has no matching item on the drawing (extra, or from another revision)",
+      "drawing_id": null,
+      "drawing_desc": null,
+      "page": null,
+      "bbox": null,
+      "bom_row": 14,
+      "bom_desc": "Drain valve 25 NB"
+    },
+    {
+      "type": "extra",
+      "severity": "yellow",
+      "message": "BOM row 15 'Globe valve, vent, 15 NB' has no matching item on the drawing (extra, or from another revision)",
+      "drawing_id": null,
+      "drawing_desc": null,
+      "page": null,
+      "bbox": null,
+      "bom_row": 15,
+      "bom_desc": "Globe valve, vent, 15 NB"
+    },
+    {
+      "type": "extra",
+      "severity": "yellow",
+      "message": "BOM row 16 'Pressure gauge tapping, 1/2 NB' has no matching item on the drawing (extra, or from another revision)",
+      "drawing_id": null,
+      "drawing_desc": null,
+      "page": null,
+      "bbox": null,
+      "bom_row": 16,
+      "bom_desc": "Pressure gauge tapping, 1/2 NB"
+    },
+    {
+      "type": "extra",
+      "severity": "yellow",
+      "message": "BOM row 17 'Spiral wound gasket 200 NB Class 150' has no matching item on the drawing (extra, or from another revision)",
+      "drawing_id": null,
+      "drawing_desc": null,
+      "page": null,
+      "bbox": null,
+      "bom_row": 17,
+      "bom_desc": "Spiral wound gasket 200 NB Class 150"
+    },
+    {
+      "type": "extra",
+      "severity": "yellow",
+      "message": "BOM row 18 'Stud bolt M20 x 90 with 2 nuts' has no matching item on the drawing (extra, or from another revision)",
+      "drawing_id": null,
+      "drawing_desc": null,
+      "page": null,
+      "bbox": null,
+      "bom_row": 18,
+      "bom_desc": "Stud bolt M20 x 90 with 2 nuts"
+    },
+    {
+      "type": "extra",
+      "severity": "yellow",
+      "message": "BOM row 19 'Lug, lifting, 16 mm' has no matching item on the drawing (extra, or from another revision)",
+      "drawing_id": null,
+      "drawing_desc": null,
+      "page": null,
+      "bbox": null,
+      "bom_row": 19,
+      "bom_desc": "Lug, lifting, 16 mm"
+    },
+    {
+      "type": "extra",
+      "severity": "yellow",
+      "message": "BOM row 20 'Expansion joint 600 x 600' has no matching item on the drawing (extra, or from another revision)",
+      "drawing_id": null,
+      "drawing_desc": null,
+      "page": null,
+      "bbox": null,
+      "bom_row": 20,
+      "bom_desc": "Expansion joint 600 x 600"
+    },
+    {
+      "type": "extra",
+      "severity": "yellow",
+      "message": "BOM row 21 'Name plate' has no matching item on the drawing (extra, or from another revision)",
+      "drawing_id": null,
+      "drawing_desc": null,
+      "page": null,
+      "bbox": null,
+      "bom_row": 21,
+      "bom_desc": "Name plate"
+    },
+    {
+      "type": "extra",
+      "severity": "yellow",
+      "message": "BOM row 22 'Inspection door, 300 x 300' has no matching item on the drawing (extra, or from another revision)",
+      "drawing_id": null,
+      "drawing_desc": null,
+      "page": null,
+      "bbox": null,
+      "bom_row": 22,
+      "bom_desc": "Inspection door, 300 x 300"
+    },
+    {
+      "type": "extra",
+      "severity": "yellow",
+      "message": "BOM row 24 'Gate valve, drain, 25 NB' has no matching item on the drawing (extra, or from another revision)",
+      "drawing_id": null,
+      "drawing_desc": null,
+      "page": null,
+      "bbox": null,
+      "bom_row": 24,
+      "bom_desc": "Gate valve, drain, 25 NB"
+    },
+    {
+      "type": "extra",
+      "severity": "yellow",
+      "message": "BOM row 25 'Hand rail, 42 NB' has no matching item on the drawing (extra, or from another revision)",
+      "drawing_id": null,
+      "drawing_desc": null,
+      "page": null,
+      "bbox": null,
+      "bom_row": 25,
+      "bom_desc": "Hand rail, 42 NB"
+    },
+    {
+      "type": "omission",
+      "severity": "red",
+      "message": "Balloon 18 on the drawing is in neither the parts table nor the BOM",
+      "drawing_id": "18",
+      "drawing_desc": "(balloon only)",
+      "page": 0,
+      "bbox": [
+        90.9414742483363,
+        225.69465898616005,
+        106.85057889865394,
+        241.6037636364777
+      ],
+      "bom_row": null,
+      "bom_desc": null
+    },
+    {
+      "type": "implied",
+      "severity": "blue",
+      "drawing_id": null,
+      "drawing_desc": null,
+      "page": 0,
+      "bbox": [
+        66.02041913138157,
+        662.5635184803351,
+        103.19204460244684,
+        678.5882130385813
+      ],
+      "bom_row": null,
+      "bom_desc": null,
+      "label": "Welding consumables",
+      "message": "Suggestion (Welding consumables): the drawing notes imply it, but no matching line was found in the BOM"
+    }
+  ]
+}

@@ -1,0 +1,228 @@
+{
+  "meta": {
+    "drawing": "samples/sample_03_drawing_scan.pdf",
+    "bom": "samples/sample_03_bom.xlsx",
+    "bom_revision": "D"
+  },
+  "reliability": "HIGH",
+  "reliability_reasons": [],
+  "drawing_revision": "D",
+  "bom_revision": "D",
+  "scanned": true,
+  "completeness": 87.5,
+  "n_drawing_items": 16,
+  "n_bom_rows": 17,
+  "matches": [
+    {
+      "drawing_id": "1",
+      "bom_row": 10,
+      "score": 82.0,
+      "status": "SPEC"
+    },
+    {
+      "drawing_id": "2",
+      "bom_row": 21,
+      "score": 100.0,
+      "status": "OK"
+    },
+    {
+      "drawing_id": "3",
+      "bom_row": 16,
+      "score": 100.0,
+      "status": "QTY"
+    },
+    {
+      "drawing_id": "4",
+      "bom_row": 9,
+      "score": 100.0,
+      "status": "OK"
+    },
+    {
+      "drawing_id": "5",
+      "bom_row": 11,
+      "score": 100.0,
+      "status": "OK"
+    },
+    {
+      "drawing_id": "6",
+      "bom_row": 6,
+      "score": 100.0,
+      "status": "OK"
+    },
+    {
+      "drawing_id": "7",
+      "bom_row": 14,
+      "score": 100.0,
+      "status": "OK"
+    },
+    {
+      "drawing_id": "8",
+      "bom_row": 8,
+      "score": 100.0,
+      "status": "OK"
+    },
+    {
+      "drawing_id": "9",
+      "bom_row": 17,
+      "score": 100.0,
+      "status": "OK"
+    },
+    {
+      "drawing_id": "10",
+      "bom_row": 12,
+      "score": 100.0,
+      "status": "OK"
+    },
+    {
+      "drawing_id": "11",
+      "bom_row": 15,
+      "score": 82.5,
+      "status": "QTY"
+    },
+    {
+      "drawing_id": "12",
+      "bom_row": 7,
+      "score": 100.0,
+      "status": "OK"
+    },
+    {
+      "drawing_id": "13",
+      "bom_row": null,
+      "score": 0,
+      "status": "MISSING"
+    },
+    {
+      "drawing_id": "14",
+      "bom_row": null,
+      "score": 0,
+      "status": "MISSING"
+    },
+    {
+      "drawing_id": "15",
+      "bom_row": 18,
+      "score": 88.3,
+      "status": "OK"
+    },
+    {
+      "drawing_id": "16",
+      "bom_row": 19,
+      "score": 100.0,
+      "status": "OK"
+    }
+  ],
+  "issues": [
+    {
+      "type": "spec",
+      "severity": "orange",
+      "message": "Item 1: specification mismatch - dimension: drawing ['8'] vs BOM ['10']",
+      "drawing_id": "1",
+      "drawing_desc": "INLET HEADER 219.1 OD X 8.0 THK",
+      "page": 0,
+      "bbox": [
+        668.6012406095616,
+        365.94299186889145,
+        1134.7975971136932,
+        376.86046683833496
+      ],
+      "bom_row": 10,
+      "bom_desc": "Header, inlet, 219.1 x 10.0 mm"
+    },
+    {
+      "type": "multiplier",
+      "severity": "orange",
+      "message": "Item 3: drawing note says qty is per bank, x4; BOM has 116 but total should be 464",
+      "drawing_id": "3",
+      "drawing_desc": "ECONOMISER TUBE 38.1 OD X 3.6 THK",
+      "page": 0,
+      "bbox": [
+        668.6012406095616,
+        395.64269547419525,
+        1134.7975971136932,
+        407.05540005090245
+      ],
+      "bom_row": 16,
+      "bom_desc": "Economiser tube 38.1 OD x 3.6 thk",
+      "drawing_qty": 116.0,
+      "bom_qty": 116.0,
+      "expected": 464.0
+    },
+    {
+      "type": "quantity",
+      "severity": "orange",
+      "message": "Item 11: quantity differs (drawing 2, BOM 3)",
+      "drawing_id": "11",
+      "drawing_desc": "GASKET 200 NB CL.150",
+      "page": 0,
+      "bbox": [
+        668.6012406095616,
+        515.5644882639791,
+        1134.7975971136932,
+        526.713997403267
+      ],
+      "bom_row": 15,
+      "bom_desc": "Gasket, spiral wound, 200 NB, 150#",
+      "drawing_qty": 2.0,
+      "bom_qty": 3.0
+    },
+    {
+      "type": "omission",
+      "severity": "red",
+      "message": "Item 13 'LIFTING LUG 16 THK' (qty 4) is on the drawing but has no BOM line",
+      "drawing_id": "13",
+      "drawing_desc": "LIFTING LUG 16 THK",
+      "page": 0,
+      "bbox": [
+        668.6012406095616,
+        545.7723215711878,
+        1134.7975971136932,
+        556.8636965177421
+      ],
+      "bom_row": null,
+      "bom_desc": null
+    },
+    {
+      "type": "omission",
+      "severity": "red",
+      "message": "Item 14 'CASING PLATE 3 THK' (qty 23) is on the drawing but has no BOM line",
+      "drawing_id": "14",
+      "drawing_desc": "CASING PLATE 3 THK",
+      "page": 0,
+      "bbox": [
+        668.6012406095616,
+        560.5640391811062,
+        1134.7975971136932,
+        571.9586501185762
+      ],
+      "bom_row": null,
+      "bom_desc": null
+    },
+    {
+      "type": "extra",
+      "severity": "yellow",
+      "message": "BOM row 20 'Hand rail, 42 NB' has no matching item on the drawing (extra, or from another revision)",
+      "drawing_id": null,
+      "drawing_desc": null,
+      "page": null,
+      "bbox": null,
+      "bom_row": 20,
+      "bom_desc": "Hand rail, 42 NB"
+    },
+    {
+      "type": "implied",
+      "severity": "blue",
+      "drawing_id": null,
+      "drawing_desc": null,
+      "page": 0,
+      "bbox": [
+        62.41152438465892,
+        659.470124574878,
+        103.16010775581371,
+        670.1141089026928
+      ],
+      "bom_row": null,
+      "bom_desc": null,
+      "label": "Welding consumables",
+      "message": "Suggestion (Welding consumables): the drawing notes imply it, but no matching line was found in the BOM"
+    }
+  ]
+}

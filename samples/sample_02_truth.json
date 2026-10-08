@@ -1,0 +1,148 @@
+{
+  "sample": 2,
+  "drawing_rev": "B",
+  "bom_rev": "A",
+  "renumbered": true,
+  "style_draw": [
+    "Pos",
+    "Description",
+    "Material Spec",
+    "Qty"
+  ],
+  "style_bom": [
+    "Pos",
+    "Description",
+    "Matl",
+    "Nos"
+  ],
+  "n_items": 17,
+  "n_bom_rows": 18,
+  "errors": [
+    {
+      "type": "omission",
+      "key": "12",
+      "desc": "Stud bolt with nuts, M20 x 90"
+    },
+    {
+      "type": "omission",
+      "key": "10",
+      "desc": "Thermowell 1/2 NPT"
+    },
+    {
+      "type": "revision",
+      "key": "revision",
+      "desc": "drawing B vs BOM A"
+    },
+    {
+      "type": "spec",
+      "key": "1",
+      "desc": "Inlet header 219.1 OD x 10 thk"
+    },
+    {
+      "type": "quantity",
+      "key": "9",
+      "desc": "Globe valve, vent, 15 NB",
+      "drawing_qty": 1,
+      "bom_qty": 2
+    },
+    {
+      "type": "implied",
+      "key": "Cladding",
+      "desc": "Aluminium cladding 0.6 mm"
+    },
+    {
+      "type": "multiplier",
+      "key": "3",
+      "desc": "Tube, economiser, 38.1 x 3.6 mm",
+      "drawing_qty": 122,
+      "expected": 488
+    }
+  ],
+  "drawing_items": [
+    {
+      "id": "1",
+      "desc": "INLET HEADER 219.1 OD X 8.0 THK",
+      "qty": 1
+    },
+    {
+      "id": "2",
+      "desc": "OUTLET HEADER 219.1 OD X 8.0 THK",
+      "qty": 1
+    },
+    {
+      "id": "3",
+      "desc": "ECONOMISER TUBE 38.1 OD X 3.6 THK",
+      "qty": 122
+    },
+    {
+      "id": "4",
+      "desc": "RETURN BEND 38.1 OD",
+      "qty": 48
+    },
+    {
+      "id": "5",
+      "desc": "TUBE SUPPORT PLATE 12 THK",
+      "qty": 13
+    },
+    {
+      "id": "6",
+      "desc": "INLET FLANGE 200 NB CL.150",
+      "qty": 1
+    },
+    {
+      "id": "7",
+      "desc": "OUTLET FLANGE 200 NB CL.150",
+      "qty": 1
+    },
+    {
+      "id": "8",
+      "desc": "DRAIN VALVE 25 NB",
+      "qty": 2
+    },
+    {
+      "id": "9",
+      "desc": "VENT VALVE 15 NB",
+      "qty": 1
+    },
+    {
+      "id": "10",
+      "desc": "THERMOWELL 1/2 NPT",
+      "qty": 2
+    },
+    {
+      "id": "11",
+      "desc": "PRESSURE TAPPING 1/2 NB",
+      "qty": 2
+    },
+    {
+      "id": "12",
+      "desc": "STUD BOLT M20 X 90 WITH 2 NUTS",
+      "qty": 16
+    },
+    {
+      "id": "13",
+      "desc": "LIFTING LUG 16 THK",
+      "qty": 4
+    },
+    {
+      "id": "14",
+      "desc": "CASING PLATE 3 THK",
+      "qty": 17
+    },
+    {
+      "id": "15",
+      "desc": "EXPANSION JOINT 600 X 600",
+      "qty": 1
+    },
+    {
+      "id": "16",
+      "desc": "NAME PLATE",
+      "qty": 1
+    },
+    {
+      "id": "17",
+      "desc": "INSPECTION DOOR 300 X 300",
+      "qty": 2
+    }
+  ]
+}

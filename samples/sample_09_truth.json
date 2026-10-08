@@ -1,0 +1,142 @@
+{
+  "sample": 9,
+  "drawing_rev": "B",
+  "bom_rev": "A",
+  "renumbered": true,
+  "style_draw": [
+    "Item",
+    "Description",
+    "Material",
+    "Qty",
+    "Part No",
+    "Remarks"
+  ],
+  "style_bom": [
+    "Item No",
+    "Description",
+    "Material",
+    "Size",
+    "Qty",
+    "UoM",
+    "Remarks"
+  ],
+  "n_items": 16,
+  "n_bom_rows": 18,
+  "errors": [
+    {
+      "type": "implied",
+      "key": "Paint / primer",
+      "desc": "Primer, red oxide, 1 coat"
+    },
+    {
+      "type": "omission",
+      "key": "8",
+      "desc": "Drain valve 25 NB"
+    },
+    {
+      "type": "revision",
+      "key": "revision",
+      "desc": "drawing B vs BOM A"
+    },
+    {
+      "type": "quantity",
+      "key": "11",
+      "desc": "Pressure tapping 1/2 NB",
+      "drawing_qty": 2,
+      "bom_qty": 3
+    },
+    {
+      "type": "duplicate",
+      "key": "Lifting lug 16 thk",
+      "desc": "Lifting lug 16 thk",
+      "item": "13"
+    },
+    {
+      "type": "spec",
+      "key": "14",
+      "desc": "Casing plate 5 thk"
+    }
+  ],
+  "drawing_items": [
+    {
+      "id": "1",
+      "desc": "INLET HEADER 219.1 OD X 8.0 THK",
+      "qty": 1
+    },
+    {
+      "id": "2",
+      "desc": "OUTLET HEADER 219.1 OD X 8.0 THK",
+      "qty": 1
+    },
+    {
+      "id": "3",
+      "desc": "ECONOMISER TUBE 38.1 OD X 3.6 THK",
+      "qty": 108
+    },
+    {
+      "id": "4",
+      "desc": "RETURN BEND 38.1 OD",
+      "qty": 28
+    },
+    {
+      "id": "5",
+      "desc": "TUBE SUPPORT PLATE 12 THK",
+      "qty": 13
+    },
+    {
+      "id": "6",
+      "desc": "INLET FLANGE 200 NB CL.150",
+      "qty": 1
+    },
+    {
+      "id": "7",
+      "desc": "OUTLET FLANGE 200 NB CL.150",
+      "qty": 1
+    },
+    {
+      "id": "8",
+      "desc": "DRAIN VALVE 25 NB",
+      "qty": 2
+    },
+    {
+      "id": "9",
+      "desc": "VENT VALVE 15 NB",
+      "qty": 1
+    },
+    {
+      "id": "10",
+      "desc": "THERMOWELL 1/2 NPT",
+      "qty": 2
+    },
+    {
+      "id": "11",
+      "desc": "PRESSURE TAPPING 1/2 NB",
+      "qty": 2
+    },
+    {
+      "id": "12",
+      "desc": "GASKET 200 NB CL.150",
+      "qty": 2
+    },
+    {
+      "id": "13",
+      "desc": "LIFTING LUG 16 THK",
+      "qty": 4
+    },
+    {
+      "id": "14",
+      "desc": "CASING PLATE 3 THK",
+      "qty": 21
+    },
+    {
+      "id": "15",
+      "desc": "EXPANSION JOINT 600 X 600",
+      "qty": 1
+    },
+    {
+      "id": "16",
+      "desc": "NAME PLATE",
+      "qty": 1
+    }
+  ]
+}

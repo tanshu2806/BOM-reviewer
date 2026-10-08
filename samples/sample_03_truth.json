@@ -1,0 +1,144 @@
+{
+  "sample": 3,
+  "drawing_rev": "D",
+  "bom_rev": "D",
+  "renumbered": true,
+  "style_draw": [
+    "Sr No",
+    "Part Description",
+    "Material",
+    "Size",
+    "Qty"
+  ],
+  "style_bom": [
+    "Pos",
+    "Description",
+    "Matl",
+    "Nos"
+  ],
+  "n_items": 16,
+  "n_bom_rows": 17,
+  "errors": [
+    {
+      "type": "quantity",
+      "key": "11",
+      "desc": "Gasket, spiral wound, 200 NB, 150#",
+      "drawing_qty": 2,
+      "bom_qty": 3
+    },
+    {
+      "type": "omission",
+      "key": "14",
+      "desc": "Casing plate 3 thk"
+    },
+    {
+      "type": "omission",
+      "key": "13",
+      "desc": "Lug, lifting, 16 mm"
+    },
+    {
+      "type": "extra",
+      "key": "Hand rail, 42 NB",
+      "desc": "Hand rail, 42 NB"
+    },
+    {
+      "type": "implied",
+      "key": "Welding consumables",
+      "desc": "Electrode E7018, 3.15 mm"
+    },
+    {
+      "type": "spec",
+      "key": "1",
+      "desc": "Header, inlet, 219.1 x 10.0 mm"
+    },
+    {
+      "type": "multiplier",
+      "key": "3",
+      "desc": "Economiser tube 38.1 OD x 3.6 thk",
+      "drawing_qty": 116,
+      "expected": 464
+    }
+  ],
+  "drawing_items": [
+    {
+      "id": "1",
+      "desc": "INLET HEADER 219.1 OD X 8.0 THK",
+      "qty": 1
+    },
+    {
+      "id": "2",
+      "desc": "OUTLET HEADER 219.1 OD X 8.0 THK",
+      "qty": 1
+    },
+    {
+      "id": "3",
+      "desc": "ECONOMISER TUBE 38.1 OD X 3.6 THK",
+      "qty": 116
+    },
+    {
+      "id": "4",
+      "desc": "TUBE SUPPORT PLATE 12 THK",
+      "qty": 14
+    },
+    {
+      "id": "5",
+      "desc": "INLET FLANGE 200 NB CL.150",
+      "qty": 1
+    },
+    {
+      "id": "6",
+      "desc": "OUTLET FLANGE 200 NB CL.150",
+      "qty": 1
+    },
+    {
+      "id": "7",
+      "desc": "SAFETY VALVE 50 NB",
+      "qty": 1
+    },
+    {
+      "id": "8",
+      "desc": "DRAIN VALVE 25 NB",
+      "qty": 2
+    },
+    {
+      "id": "9",
+      "desc": "VENT VALVE 15 NB",
+      "qty": 1
+    },
+    {
+      "id": "10",
+      "desc": "THERMOWELL 1/2 NPT",
+      "qty": 2
+    },
+    {
+      "id": "11",
+      "desc": "GASKET 200 NB CL.150",
+      "qty": 2
+    },
+    {
+      "id": "12",
+      "desc": "STUD BOLT M20 X 90 WITH 2 NUTS",
+      "qty": 16
+    },
+    {
+      "id": "13",
+      "desc": "LIFTING LUG 16 THK",
+      "qty": 4
+    },
+    {
+      "id": "14",
+      "desc": "CASING PLATE 3 THK",
+      "qty": 23
+    },
+    {
+      "id": "15",
+      "desc": "NAME PLATE",
+      "qty": 1
+    },
+    {
+      "id": "16",
+      "desc": "INSPECTION DOOR 300 X 300",
+      "qty": 2
+    }
+  ]
+}

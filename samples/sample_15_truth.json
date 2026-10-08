@@ -1,0 +1,140 @@
+{
+  "sample": 15,
+  "drawing_rev": "C",
+  "bom_rev": "B",
+  "renumbered": false,
+  "style_draw": [
+    "Item",
+    "Description",
+    "Material",
+    "Qty",
+    "Part No",
+    "Remarks"
+  ],
+  "style_bom": [
+    "Sr. No.",
+    "Item Description",
+    "Material Spec",
+    "Qty",
+    "Unit",
+    "Drg Ref"
+  ],
+  "n_items": 16,
+  "n_bom_rows": 18,
+  "errors": [
+    {
+      "type": "quantity",
+      "key": "1",
+      "desc": "Inlet header 219.1 OD x 8 thk",
+      "drawing_qty": 1,
+      "bom_qty": 2
+    },
+    {
+      "type": "extra",
+      "key": "Hand rail, 42 NB",
+      "desc": "Hand rail, 42 NB"
+    },
+    {
+      "type": "omission",
+      "key": "11",
+      "desc": "Spiral wound gasket 200 NB Class 150"
+    },
+    {
+      "type": "omission",
+      "key": "15",
+      "desc": "Name plate, stainless steel"
+    },
+    {
+      "type": "revision",
+      "key": "revision",
+      "desc": "drawing C vs BOM B"
+    },
+    {
+      "type": "spec",
+      "key": "7",
+      "desc": "Flange, outlet, WNRF, 250 NB, 150#"
+    }
+  ],
+  "drawing_items": [
+    {
+      "id": "1",
+      "desc": "INLET HEADER 219.1 OD X 8.0 THK",
+      "qty": 1
+    },
+    {
+      "id": "2",
+      "desc": "OUTLET HEADER 219.1 OD X 8.0 THK",
+      "qty": 1
+    },
+    {
+      "id": "3",
+      "desc": "ECONOMISER TUBE 38.1 OD X 3.6 THK",
+      "qty": 122
+    },
+    {
+      "id": "4",
+      "desc": "RETURN BEND 38.1 OD",
+      "qty": 46
+    },
+    {
+      "id": "5",
+      "desc": "TUBE SUPPORT PLATE 12 THK",
+      "qty": 10
+    },
+    {
+      "id": "6",
+      "desc": "INLET FLANGE 200 NB CL.150",
+      "qty": 1
+    },
+    {
+      "id": "7",
+      "desc": "OUTLET FLANGE 200 NB CL.150",
+      "qty": 1
+    },
+    {
+      "id": "8",
+      "desc": "SAFETY VALVE 50 NB",
+      "qty": 1
+    },
+    {
+      "id": "9",
+      "desc": "DRAIN VALVE 25 NB",
+      "qty": 2
+    },
+    {
+      "id": "10",
+      "desc": "THERMOWELL 1/2 NPT",
+      "qty": 2
+    },
+    {
+      "id": "11",
+      "desc": "GASKET 200 NB CL.150",
+      "qty": 2
+    },
+    {
+      "id": "12",
+      "desc": "STUD BOLT M20 X 90 WITH 2 NUTS",
+      "qty": 16
+    },
+    {
+      "id": "13",
+      "desc": "CASING PLATE 3 THK",
+      "qty": 24
+    },
+    {
+      "id": "14",
+      "desc": "EXPANSION JOINT 600 X 600",
+      "qty": 1
+    },
+    {
+      "id": "15",
+      "desc": "NAME PLATE",
+      "qty": 1
+    },
+    {
+      "id": "16",
+      "desc": "INSPECTION DOOR 300 X 300",
+      "qty": 2
+    }
+  ]
+}

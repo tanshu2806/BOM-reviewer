@@ -1,0 +1,164 @@
+{
+  "_comment": "ALL values are ASSUMPTIONS (see assumption register). Edit here, not in code. Re-tune on real client pairs after MoU.",
+  "header_synonyms": {
+    "item": [
+      "item no",
+      "item",
+      "sr no",
+      "sr. no.",
+      "sr.no",
+      "s.no",
+      "sl no",
+      "sl. no.",
+      "pos",
+      "position",
+      "mark",
+      "no"
+    ],
+    "description": [
+      "part description",
+      "item description",
+      "description",
+      "desc",
+      "name"
+    ],
+    "material": [
+      "material spec",
+      "material",
+      "matl",
+      "mat'l",
+      "specification",
+      "spec"
+    ],
+    "size": [
+      "dimensions",
+      "dimension",
+      "size",
+      "dim"
+    ],
+    "qty": [
+      "req qty",
+      "quantity",
+      "qty",
+      "nos",
+      "no. off"
+    ],
+    "uom": [
+      "uom",
+      "unit"
+    ],
+    "partno": [
+      "part no",
+      "part number",
+      "drg no",
+      "drg. no.",
+      "drg ref",
+      "dwg no",
+      "drawing no"
+    ],
+    "remarks": [
+      "remarks",
+      "remark"
+    ]
+  },
+  "abbreviations": {
+    "hdr": "header",
+    "flg": "flange",
+    "gskt": "gasket",
+    "sw": "spiral wound",
+    "econ": "economiser",
+    "economizer": "economiser",
+    "vlv": "valve",
+    "plt": "plate",
+    "insul": "insulation",
+    "elec": "electrode",
+    "thk": "",
+    "thick": "",
+    "mm": "",
+    "dia": "",
+    "od": "",
+    "nb": "",
+    "nps": "",
+    "wnrf": "",
+    "cl": "",
+    "class": "",
+    "with": "",
+    "and": "",
+    "of": "",
+    "the": "",
+    "type": "",
+    "no": "",
+    "nos": "",
+    "insp": "inspection",
+    "expn": "expansion",
+    "exp": "expansion",
+    "press": "pressure",
+    "temp": "temperature",
+    "supp": "support",
+    "sup": "support",
+    "tx": "transmitter",
+    "vnt": "vent",
+    "tbe": "tube",
+    "sfty": "safety"
+  },
+  "thresholds": {
+    "match": 85,
+    "possible": 70,
+    "material_ratio": 85,
+    "id_bonus": 8,
+    "ocr_min_conf": 40,
+    "duplicate": 78,
+    "token_fuzzy": 80
+  },
+  "weights": {
+    "text": 0.7,
+    "numbers": 0.3
+  },
+  "ocr": {
+    "dpi": 200,
+    "psm": 11
+  },
+  "non_drawn_patterns": "electrode|filler|welding|insulation|mineral wool|rockwool|cladding|primer|paint|consumable",
+  "implied_rules": [
+    {
+      "label": "Welding consumables",
+      "when": "WELD",
+      "expect": "electrode|filler|welding"
+    },
+    {
+      "label": "Insulation",
+      "when": "INSULAT",
+      "expect": "insulat|mineral wool|rockwool"
+    },
+    {
+      "label": "Cladding",
+      "when": "CLAD",
+      "expect": "clad"
+    },
+    {
+      "label": "Paint / primer",
+      "when": "PAINT|PRIMER",
+      "expect": "paint|primer"
+    }
+  ],
+  "multiplier": {
+    "note_regex": "PER\\s+BANK",
+    "count_regex": "(\\d+)\\s+BANKS",
+    "applies_to": "economiser tube"
+  },
+  "phrase_synonyms": {
+    "u-bend": "return bend",
+    "u bend": "return bend",
+    "safety relief valve": "safety valve",
+    "pressure gauge tapping": "pressure tapping",
+    "gate valve": "valve",
+    "globe valve": "valve",
+    "stud bolt with nuts": "stud bolt nuts"
+  },
+  "reliability": {
+    "min_match_fraction": 0.5,
+    "warn_match_fraction": 0.75,
+    "min_ocr_conf": 70,
+    "min_rows": 3
+  }
+}
