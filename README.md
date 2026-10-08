@@ -73,7 +73,7 @@ Colours: 🔴 on drawing but missing in BOM · 🟠 quantity / spec / revision m
 | **Stress A**: BOM wording with typos/abbreviations/reordering | 153/153 found, **8 false alarms (precision 95%)** — after adding an abbreviation list that overlaps the test's own abbreviations, so optimistic |
 | **Stress B**: heavily degraded scans (150 dpi, skew, blur, noise, shadow, JPEG q40) | **Extraction fails** (recall 34%, precision 9%) — but all 10 runs are flagged **LOW reliability** with a banner on every output |
 
-## Known limits (be upfront about these)
+## Known limits 
 
 1. **Only tested on data I generated.** Real drawings will differ (fonts, wrapped cells, merged cells, multi-page tables, non-English text, CAD-specific table layouts).
 2. **Vector tables assume left-aligned text under headers** (scans use the ruled grid instead). Fix = use the vertical rules for vector PDFs too.
@@ -93,13 +93,13 @@ python evaluate.py --samples samples --scans                   # metrics on the 
 python stress_test.py                                          # harder conditions
 ```
 
-## What I need from the company after the MoU (in priority order)
+<!-- ## What I need from the company after the MoU (in priority order)
 
 1. 3–5 real drawing + BOM pairs (masked or closed projects) — decides everything below.
 2. Whether drawings are vector, scanned, or CAD, and whether parts table + balloons exist.
 3. A blank BOM template (column names) and the BOM abbreviation/vocabulary list.
 4. The list of past omissions (even as plain text) to build realistic implied-item rules.
-5. What "success" means (e.g. recall target, max false alarms per drawing).
+5. What "success" means (e.g. recall target, max false alarms per drawing). -->
 
 ## Project layout
 
