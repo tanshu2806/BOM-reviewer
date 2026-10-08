@@ -20,7 +20,15 @@ pip install -r requirements.txt
 python run_check.py samples/sample_01_drawing.pdf samples/sample_01_bom.xlsx --out outputs
 ```
 
-### Use the Streamlit UI
+### Use the Custom Web UI (Flask)
+
+```bash
+python server.py
+```
+
+Open `http://127.0.0.1:5000` in your browser. This provides a custom modern web interface with interactive drag-and-drop uploads, instant sample dataset testing, completeness gauge dashboard, filtered severity cards (Omissions, Mismatches, Implied), embedded PDF previewer, BOM table inspector, and synonym configuration editor.
+
+### Use the Streamlit UI (Legacy Prototype)
 
 ```bash
 streamlit run app.py
