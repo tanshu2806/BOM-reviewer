@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>BOM Completeness Checker — Engineering Drawing Verification</title>
+  
+  <!-- Modern Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@500;600;700;800&display=swap" rel="stylesheet">
+  
+  <!-- FontAwesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  
+  <!-- Custom Vanilla CSS -->
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body class="light-theme">
+  
+  <!-- Navbar -->
+  <header class="navbar">
+    <div class="navbar-container">
+      <div class="brand">
+        <div class="brand-logo">
+          <i class="fa-solid fa-drafting-compass"></i>
+        </div>
+        <div class="brand-text">
+          <h1>BOM Completeness Checker</h1>
+          <span class="badge-tag">Offline CAD Verification Engine</span>
+        </div>
+      </div>
+      <div class="navbar-actions">
+        <button id="sampleBtn" class="btn btn-secondary">
+          <i class="fa-solid fa-flask"></i> Try Sample Data
+        </button>
+        <button id="configBtn" class="btn btn-ghost">
+          <i class="fa-solid fa-sliders"></i> Settings & Synonyms
+        </button>
+        <button id="themeToggle" class="btn btn-icon" title="Toggle Theme">
+          <i class="fa-solid fa-moon"></i>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <main class="app-container">
+    
+    <!-- Hero Banner & Upload Section -->
+    <section class="upload-section">
+      <div class="section-header">
+        <h2>Engineering Drawing vs BOM Cross-Verification</h2>
+        <p>Upload your engineering drawing PDF (vector or scanned) and Excel BOM to automatically detect omissions, quantity mismatches, and spec discrepancies.</p>
+      </div>
+
+      <form id="checkForm" class="upload-grid">
+        <!-- Drawing Dropzone -->
+        <div class="dropzone" id="drawingDropzone">
+          <input type="file" id="drawingInput" accept=".pdf" class="file-input">
+          <div class="dropzone-content">
+            <div class="dropzone-icon">
+              <i class="fa-solid fa-file-pdf"></i>
+            </div>
+            <h3>Engineering Drawing (PDF)</h3>
+            <p>Drag & drop vector or scanned drawing PDF here or <span class="browse-link">browse</span></p>
+            <div class="file-details" id="drawingDetails">
+              <i class="fa-solid fa-check-circle"></i> <span class="file-name"></span>
+              <button type="button" class="btn-remove" id="removeDrawing"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+          </div>
+        </div>
+
+        <!-- BOM Dropzone -->
+        <div class="dropzone" id="bomDropzone">
+          <input type="file" id="bomInput" accept=".xlsx, .xls, .xlsm" class="file-input">
+          <div class="dropzone-content">
+            <div class="dropzone-icon">
+              <i class="fa-solid fa-file-excel"></i>
+            </div>
+            <h3>Bill of Materials (Excel)</h3>
+            <p>Drag & drop BOM spreadsheet here or <span class="browse-link">browse</span></p>
+            <div class="file-details" id="bomDetails">
+              <i class="fa-solid fa-check-circle"></i> <span class="file-name"></span>
+              <button type="button" class="btn-remove" id="removeBom"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+          </div>
+        </div>
+      </form>
+
+      <!-- Advanced / Optional Upload Toggle -->
+      <div class="optional-config-bar">
+        <label for="configInput" class="config-upload-label">
+          <i class="fa-solid fa-gear"></i> Optional Config Override (.json)
+        </label>
+        <input type="file" id="configInput" accept=".json" class="file-input-inline">
+        <span id="configFileName" class="config-filename">No file selected</span>
+      </div>
+
+      <!-- Action Button Row -->
+      <div class="action-row">
+        <button type="button" id="runCheckBtn" class="btn btn-primary btn-large">
+          <i class="fa-solid fa-play"></i> Run Verification Check
+        </button>
+        <button type="button" id="resetBtn" class="btn btn-outline">
+          <i class="fa-solid fa-rotate-left"></i> Reset Selection
+        </button>
+      </div>
+
+      <!-- Processing Loading State -->
+      <div id="loadingOverlay" class="loading-state hidden">
+        <div class="spinner-pulse"></div>
+        <h3>Analysing Drawing & Cross-Checking BOM...</h3>
+        <p>Executing extraction, table reading, OCR scanning, and fuzzy assignment algorithms.</p>
+        <div class="progress-bar-container">
+          <div class="progress-bar-fill"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Error Banner -->
+    <div id="errorAlert" class="alert alert-error hidden">
+      <i class="fa-solid fa-triangle-exclamation"></i>
+      <span id="errorMessage"></span>
+      <button class="alert-close" onclick="document.getElementById('errorAlert').classList.add('hidden')">&times;</button>
+    </div>
+
+    <!-- Dashboard Results Section -->
+    <section id="resultsSection" class="results-section hidden">
+      
+      <!-- Metrics Overview Cards -->
+      <div class="kpi-grid">
+        <div class="kpi-card completeness-card">
+          <div class="kpi-info">
+            <span class="kpi-label">Completeness Score</span>
+            <div class="kpi-value"><span id="completenessVal">0</span>%</div>
+            <span class="kpi-subtext">Overall drawing coverage</span>
+          </div>
+          <div class="kpi-chart">
+            <svg viewBox="0 0 36 36" class="circular-chart">
+              <path class="circle-bg" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+              <path id="circleFill" class="circle" stroke-dasharray="0, 100" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+            </svg>
+          </div>
+        </div>
+
+        <div class="kpi-card">
+          <div class="kpi-icon icon-blue">
+            <i class="fa-solid fa-shapes"></i>
+          </div>
+          <div class="kpi-info">
+            <span class="kpi-label">Drawing Items</span>
+            <div class="kpi-value" id="drawingItemsVal">0</div>
+            <span class="kpi-subtext" id="drawingTypeMeta">Vector Drawing</span>
+          </div>
+        </div>
+
+        <div class="kpi-card">
+          <div class="kpi-icon icon-emerald">
+            <i class="fa-solid fa-table-list"></i>
+          </div>
+          <div class="kpi-info">
+            <span class="kpi-label">BOM Rows</span>
+            <div class="kpi-value" id="bomRowsVal">0</div>
+            <span class="kpi-subtext" id="bomSheetMeta">Sheet 1</span>
+          </div>
+        </div>
+
+        <div class="kpi-card">
+          <div class="kpi-icon icon-purple">
+            <i class="fa-solid fa-shield-halved"></i>
+          </div>
+          <div class="kpi-info">
+            <span class="kpi-label">Reliability Gate</span>
+            <div class="kpi-value"><span id="reliabilityBadge" class="status-badge">HIGH</span></div>
+            <span class="kpi-subtext" id="reliabilityReasons">All checks optimal</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Quick Issue Type Counters -->
+      <div class="counter-strip" id="issueCountersStrip">
+        <!-- Dynamically rendered -->
+      </div>
+
+      <!-- Header & Download Toolbar -->
+      <div class="results-toolbar">
+        <div class="toolbar-title">
+          <h3>Verification Findings & Reports</h3>
+          <span class="run-tag">Run ID: <strong id="runIdVal">--</strong></span>
+        </div>
+        <div class="toolbar-actions">
+          <a id="downloadPdfBtn" href="#" class="btn btn-outline" download>
+            <i class="fa-solid fa-file-pdf"></i> Download Annotated PDF
+          </a>
+          <a id="downloadXlsxBtn" href="#" class="btn btn-success" download>
+            <i class="fa-solid fa-file-excel"></i> Download Checked BOM Excel
+          </a>
+        </div>
+      </div>
+
+      <!-- Results Tab Container -->
+      <div class="tabs-container">
+        <div class="tab-header">
+          <button class="tab-btn active" data-tab="issuesTab">
+            <i class="fa-solid fa-list-check"></i> Findings & Discrepancies (<span id="totalIssuesCount">0</span>)
+          </button>
+          <button class="tab-btn" data-tab="pdfTab">
+            <i class="fa-solid fa-eye"></i> Annotated PDF Preview
+          </button>
+          <button class="tab-btn" data-tab="bomTab">
+            <i class="fa-solid fa-table"></i> Drawing & BOM Items
+          </button>
+          <button class="tab-btn" data-tab="jsonTab">
+            <i class="fa-solid fa-code"></i> Report JSON
+          </button>
+        </div>
+
+        <div class="tab-body">
+          <!-- Tab 1: Issues List -->
+          <div id="issuesTab" class="tab-content active">
+            <div class="issues-filter-bar">
+              <div class="filter-chips">
+                <button class="chip active" data-severity="all">All</button>
+                <button class="chip chip-red" data-severity="red">Omissions (Red)</button>
+                <button class="chip chip-orange" data-severity="orange">Mismatches (Orange)</button>
+                <button class="chip chip-yellow" data-severity="yellow">Confirm (Yellow)</button>
+                <button class="chip chip-blue" data-severity="blue">Implied (Blue)</button>
+              </div>
+              <div class="search-box">
+                <i class="fa-solid fa-magnifying-glass"></i>
+                <input type="text" id="issuesSearch" placeholder="Search issues by keyword or item...">
+              </div>
+            </div>
+
+            <div id="issuesContainer" class="issues-list">
+              <!-- Issue Cards rendered dynamically -->
+            </div>
+          </div>
+
+          <!-- Tab 2: PDF Previewer -->
+          <div id="pdfTab" class="tab-content">
+            <div class="pdf-viewer-header">
+              <span>Annotated Drawing Document</span>
+              <div class="pdf-actions">
+                <a id="pdfOpenTab" href="#" target="_blank" class="btn btn-ghost btn-sm">
+                  <i class="fa-solid fa-up-right-from-square"></i> Open Fullscreen
+                </a>
+              </div>
+            </div>
+            <div class="pdf-frame-container">
+              <iframe id="pdfFrame" src="about:blank"></iframe>
+            </div>
+          </div>
+
+          <!-- Tab 3: BOM Items Data -->
+          <div id="bomTab" class="tab-content">
+            <div class="data-table-container">
+              <table class="custom-table" id="bomTable">
+                <thead>
+                  <tr>
+                    <th>Item No</th>
+                    <th>Part No / Drawing Ref</th>
+                    <th>Description</th>
+                    <th>Material</th>
+                    <th>Quantity</th>
+                    <th>Status</th>
+                  </tr>
+                </thead>
+                <tbody id="bomTableBody">
+                  <!-- Rendered dynamically -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- Tab 4: JSON Data -->
+          <div id="jsonTab" class="tab-content">
+            <div class="json-header">
+              <span>Machine-Readable Validation Report</span>
+              <button id="copyJsonBtn" class="btn btn-ghost btn-sm">
+                <i class="fa-solid fa-copy"></i> Copy JSON
+              </button>
+            </div>
+            <pre class="json-code" id="jsonOutput"><code></code></pre>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- Modal for Configuration Settings -->
+  <div id="configModal" class="modal hidden">
+    <div class="modal-backdrop"></div>
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3><i class="fa-solid fa-sliders"></i> Engine Configuration & Header Synonyms</h3>
+        <button class="modal-close" id="closeConfigModal">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p class="help-text">View and customize synonyms, match thresholds, and abbreviation rules encoded in <code>config.json</code>.</p>
+        <textarea id="configJsonEditor" rows="18" class="code-editor"></textarea>
+      </div>
+      <div class="modal-footer">
+        <button id="saveConfigBtn" class="btn btn-primary"><i class="fa-solid fa-floppy-disk"></i> Save Configuration</button>
+        <button id="resetConfigBtn" class="btn btn-ghost">Reload Defaults</button>
+      </div>
+    </div>
+  </div>
+
+  <footer class="footer">
+    <p>BOM Verification Engine &bull; Automated Drawing-vs-BOM Completeness & Integrity Checker</p>
+  </footer>
+
+  <!-- Main JavaScript File -->
+  <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+</body>
+</html>
