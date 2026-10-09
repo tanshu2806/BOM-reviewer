@@ -17,7 +17,7 @@ warnings.filterwarnings("ignore")
 import pymupdf as fitz
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-ITEM_RE = re.compile(r"^[A-Za-z]?\d{1,3}[A-Za-z]?$")
+ITEM_RE = re.compile(r"^[A-Za-z]?\d{1,3}(?:-\d{1,3})?[A-Za-z]?$")
 REV_RES = [re.compile(r"\bDRG\.?\s*REV(?:ISION)?\.?\s*[:\-]?\s*([A-Z0-9]{1,2})\b"),
            re.compile(r"\bREV(?:ISION)?\.?\s*[:\-]?\s*([A-Z]|\d{1,2})\b")]
 
@@ -86,7 +86,7 @@ def preprocess_scan(img, z):
     angle = 0.0
     if lines is not None:
         angs, wts = [], []
-        for x1, y1, x2, y2 in lines[:, 0]:
+        for x1, y1, x2, y2 in lines.reshape(-1, 4):
             a = np.degrees(np.arctan2(y2 - y1, x2 - x1))
             if abs(a) <= 5:
                 angs.append(a); wts.append(np.hypot(x2 - x1, y2 - y1))
@@ -149,6 +149,41 @@ def find_table_region(img, z):
     if not best or best[0] < 5:
         return None
     _, x0, y0, x1, y1 = best
+    n, _, stats, _ = cv2.connectedComponentsWithStats(hmask)
+    horizontal_rules = []
+    for x, y, w, h, _ in stats[1:n]:
+        if w >= 120 * z and h <= 4 * z:
+            horizontal_rules.append((x, y, x + w, y + h))
+    x_groups = []
+    x_tolerance = int(5 * z)
+    for rule in sorted(horizontal_rules, key=lambda r: r[0]):
+        group = next((g for g in x_groups
+                      if abs(rule[0] - g[0][0]) <= x_tolerance
+                      and abs(rule[2] - g[0][2]) <= x_tolerance), None)
+        if group is None:
+            x_groups.append([rule])
+        else:
+            group.append(rule)
+    dense_rule_run = None
+    max_row_gap = int(18 * z)
+    for group in x_groups:
+        runs = []
+        for rule in sorted(group, key=lambda r: r[1]):
+            center_y = (rule[1] + rule[3]) // 2
+            if runs and center_y - runs[-1][-1] <= max_row_gap:
+                runs[-1].append(center_y)
+            else:
+                runs.append([center_y])
+        for run in runs:
+            if len(run) >= 6 and (dense_rule_run is None or len(run) > len(dense_rule_run)):
+                dense_rule_run = (group, run)
+    if dense_rule_run:
+        group, run = dense_rule_run
+        rules = [r for r in group if run[0] - max_row_gap <= (r[1] + r[3]) // 2 <= run[-1] + max_row_gap]
+        x0 = min(r[0] for r in rules)
+        y0 = min(r[1] for r in rules)
+        x1 = max(r[2] for r in rules)
+        y1 = max(r[3] for r in rules)
     return x0, y0, x1, y1, cv2.dilate(cv2.bitwise_or(hmask, vmask), np.ones((3, 3), np.uint8)), vmask
 
 
@@ -279,11 +314,13 @@ def parse_table(words, cfg, region_left=None, fuzzy=False, grid_x=None):
             right = (cols[i + 1][1] - pad) if i + 1 < len(cols) else 1e9
             bounds.append((canon, left, right))
     table_left = bounds[0][1]
+    above = [L for L in lines if L["yc"] < hline["yc"] - 1]
     below = [L for L in lines if L["yc"] > hline["yc"] + 1]
-    # keep only words that sit inside the table's x range
-    for L in below:
-        L["words"] = [w for w in L["words"] if w["x0"] >= table_left]
-    below = [L for L in below if L["words"]]
+    # Keep only words that sit inside the table's x range.
+    for side in (above, below):
+        for L in side:
+            L["words"] = [w for w in L["words"] if w["x0"] >= table_left]
+        side[:] = [L for L in side if L["words"]]
 
     def cell_text(L, i):
         _, lft, rgt = bounds[i]
@@ -292,9 +329,56 @@ def parse_table(words, cfg, region_left=None, fuzzy=False, grid_x=None):
 
     item_i = next((i for i, b in enumerate(bounds) if b[0] == "item"), 0)
     qty_i = next((i for i, b in enumerate(bounds) if b[0] == "qty"), None)
+    def row_evidence(side):
+        return sum(
+            bool(ITEM_RE.match(cell_text(L, item_i)[0].strip()))
+            or (qty_i is not None and bool(cell_text(L, qty_i)[0].strip()))
+            for L in side
+        )
+
+    if row_evidence(above) > row_evidence(below):
+        below = sorted(above, key=lambda L: L["yc"], reverse=True)
+        direction = -1
+    else:
+        below = sorted(below, key=lambda L: L["yc"])
+        direction = 1
+
+    if (
+        not grid_x
+        and {c for c, _, _ in bounds} == {"item", "description", "qty"}
+        and {"item", "description", "qty"} <= {c for c, _, _ in cols}
+    ):
+        header_centers = {c: (x0 + x1) / 2 for c, x0, x1 in cols}
+        item_center = header_centers["item"]
+        description_center = header_centers["description"]
+        qty_center = header_centers["qty"]
+        item_ends, description_starts, description_ends, qty_starts = [], [], [], []
+        for L in below:
+            item_words = [w for w in L["words"] if ITEM_RE.fullmatch(w["text"].strip()) and w["xc"] < description_center]
+            qty_words = [w for w in L["words"] if re.fullmatch(r"\d+(?:[.,]\d+)?", w["text"].strip()) and w["xc"] > description_center]
+            if not item_words or not qty_words:
+                continue
+            item_word = min(item_words, key=lambda w: abs(w["xc"] - item_center))
+            qty_word = min(qty_words, key=lambda w: abs(w["xc"] - qty_center))
+            description_words = [w for w in L["words"] if item_word["x1"] <= w["x0"] < qty_word["x0"]]
+            if description_words:
+                item_ends.append(item_word["x1"])
+                description_starts.append(min(w["x0"] for w in description_words))
+                description_ends.append(max(w["x1"] for w in description_words))
+                qty_starts.append(qty_word["x0"])
+        if item_ends and qty_starts:
+            item_description_edge = (max(item_ends) + min(description_starts)) / 2
+            description_qty_edge = (max(description_ends) + min(qty_starts)) / 2
+            if item_description_edge < description_qty_edge:
+                bounds = [
+                    ("item", bounds[0][1], item_description_edge),
+                    ("description", item_description_edge, description_qty_edge),
+                    ("qty", description_qty_edge, bounds[-1][2]),
+                ]
+
     rows, prev_yc, pitches = [], hline["yc"], []
     for L in below:
-        gap = L["yc"] - prev_yc
+        gap = direction * (L["yc"] - prev_yc)
         if pitches and gap > 2.2 * statistics.median(pitches):
             break                                   # table ended (gap to next text block)
         item_txt = cell_text(L, item_i)[0].strip()
@@ -336,6 +420,63 @@ def parse_table(words, cfg, region_left=None, fuzzy=False, grid_x=None):
                         bbox=(table_left - 1, r["y0"] - 1.5, right, r["y1"] + 1.5),
                         conf=min(w["conf"] for w in r["words"])))
     return dict(columns=[b[0] for b in bounds], rows=out, header_bbox=(table_left - 1, hline["words"][0]["y0"] - 1.5, right, hline["words"][0]["y1"] + 1.5))
+
+
+def infer_grid_header(words, grid_x):
+    edges = sorted(grid_x or [])
+    if len(edges) < 4:
+        return []
+    cells = list(zip(edges[:-1], edges[1:]))
+    if cells[0][1] - cells[0][0] > 0.18 * (edges[-1] - edges[0]):
+        return []
+
+    lines = group_lines(words)
+
+    def cell_words(line, index):
+        left, right = cells[index]
+        return [w for w in line["words"] if left <= w["xc"] < right]
+
+    alpha_scores = [
+        sum(len(re.findall(r"[A-Za-z]{2,}", w["text"])) for line in lines for w in cell_words(line, i))
+        for i in range(1, len(cells))
+    ]
+    description_i = 1 + max(range(len(alpha_scores)), key=alpha_scores.__getitem__)
+    if alpha_scores[description_i - 1] < 5:
+        return []
+
+    qty_candidates = []
+    for i in range(description_i + 1, len(cells)):
+        values = [w["text"] for line in lines for w in cell_words(line, i)]
+        numeric_count = sum(bool(re.fullmatch(r"[\W_]*\d+(?:[.,]\d+)?[\W_]*", value)) for value in values)
+        if numeric_count >= 4 and numeric_count / max(1, len(values)) >= 0.6:
+            qty_candidates.append((numeric_count / len(values), numeric_count, -(cells[i][1] - cells[i][0]), i))
+    if not qty_candidates:
+        return []
+    qty_i = max(qty_candidates)[-1]
+
+    data_y = []
+    for line in lines:
+        item_text = " ".join(w["text"] for w in cell_words(line, 0))
+        item_text = re.sub(r"^[^\w]+|[^\w]+$", "", item_text)
+        description = " ".join(w["text"] for w in cell_words(line, description_i))
+        qty_values = [w["text"] for w in cell_words(line, qty_i)]
+        has_qty = any(re.fullmatch(r"[\W_]*\d+(?:[.,]\d+)?[\W_]*", value) for value in qty_values)
+        if re.search(r"[A-Za-z]{2,}", description) and (ITEM_RE.fullmatch(item_text) or has_qty):
+            data_y.append(line["yc"])
+    data_y.sort()
+    pitches = [b - a for a, b in zip(data_y, data_y[1:]) if b > a]
+    if len(data_y) < 4 or not pitches:
+        return []
+    pitch = statistics.median(pitches)
+    header_y = data_y[-1] + pitch
+    height = statistics.median(w["y1"] - w["y0"] for w in words)
+
+    def header_word(index, text):
+        left, right = cells[index]
+        xc = (left + right) / 2
+        return _mk_word(xc - 0.3, header_y - height / 2, xc + 0.3, header_y + height / 2, text)
+
+    return [header_word(0, "item"), header_word(description_i, "description"), header_word(qty_i, "qty")]
 
 
 # ------------------------------------------------------------------------------ balloons
@@ -410,6 +551,11 @@ def read_drawing(path, cfg):
                 rx0, ry0, rx1, ry1 = region
                 words = [w for w in words if not (rx0 <= w["xc"] <= rx1 and ry0 <= w["yc"] <= ry1)] + tw
         table = parse_table(words, cfg, region_left=(region[0] if scanned and tw else None), fuzzy=scanned, grid_x=(grid_x if scanned and tw else None))
+        if table is None and scanned and tw and grid_x:
+            synthetic_header = infer_grid_header(tw, grid_x)
+            if synthetic_header:
+                table_words = [w for w in words if region and region[0] <= w["xc"] <= region[2] and region[1] <= w["yc"] <= region[3]]
+                table = parse_table(table_words + synthetic_header, cfg, region_left=region[0], fuzzy=True, grid_x=grid_x)
         balloons = scan_balloons(img, frame, cfg) if scanned else vector_balloons(page, words)
         text = " ".join(w["text"] for w in sorted(words, key=lambda w: (round(w["yc"] / 4), w["x0"])))
         pages.append(dict(page=pno, scanned=scanned, table=table, balloons=balloons, text=text, words=words,
