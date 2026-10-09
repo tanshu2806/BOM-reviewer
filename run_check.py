@@ -22,9 +22,6 @@ def run(drawing_path, bom_path, out_dir="outputs", config_path=None, quiet=False
     stem = os.path.splitext(os.path.basename(drawing_path))[0]
     drawing = read_drawing(drawing_path, cfg)
     bom = read_bom(bom_path, cfg)
-    if not any(p["table"] for p in drawing["pages"]) and not any(p["balloons"] for p in drawing["pages"]):
-        raise SystemExit("No parts table or balloons found on the drawing. Check the header synonyms in config.json "
-                         "or the scan quality (assumptions D8-D10).")
     result = compare(drawing, bom, cfg)
     meta = dict(drawing=drawing_path, bom=bom_path, bom_revision=bom["revision"])
     annotate_pdf(drawing_path, os.path.join(out_dir, f"{stem}_annotated.pdf"), drawing, result, meta)
@@ -35,7 +32,8 @@ def run(drawing_path, bom_path, out_dir="outputs", config_path=None, quiet=False
         print(f"BOM    : {os.path.basename(bom_path)}  (sheet '{bom['sheet']}', Rev {bom['revision']})")
         if result["reliability"] != "HIGH":
             print(f"*** RUN RELIABILITY: {result['reliability']} ***  " + "; ".join(result["reliability_reasons"]))
-        print(f"Items on drawing: {result['n_drawing_items']}   BOM lines: {result['n_bom_rows']}   completeness: {result['completeness']:.1f}%")
+        completeness = f"{result['completeness']:.1f}%" if result["completeness"] is not None else "n/a"
+        print(f"Items on drawing: {result['n_drawing_items']}   BOM lines: {result['n_bom_rows']}   completeness: {completeness}")
         for i in sorted(result["issues"], key=lambda i: ["red", "orange", "yellow", "blue"].index(i["severity"])):
             print(f"  [{i['severity']:6}] {i['message']}")
         print(f"Outputs in {out_dir}/")

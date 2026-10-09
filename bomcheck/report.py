@@ -3,7 +3,7 @@ H (Highlight) stage.
 
 Outputs
   <name>_annotated.pdf     the ORIGINAL drawing with coloured boxes + short labels on every flagged item,
-                           a legend on each page and a summary page at the end
+                           plus a summary page at the end
   <name>_BOM_checked.xlsx  sheet 'BOM (checked)': original rows + 'Check status' / 'Check note' columns,
                            with MISSING parts INSERTED as red rows (a missing part is not in the BOM, so it has to be added)
                            sheet 'Discrepancies': one line per issue;  sheet 'Summary': counts + legend
@@ -121,23 +121,9 @@ def annotate_pdf(src, dst, drawing, result, meta):
                     box = fitz.Rect(max(5, r.x0), min(ph - 15, r.y1 + 1), min(pw - 5, r.x0 + w), min(ph - 2, r.y1 + 11))
                 page.insert_textbox(box, text, fontsize=6.5, fontname="helv", color=col, align=2)
 
-        # Draw Legend Banner
-        x, y = 28, 26
-        banner = result["reliability"] != "HIGH"
-        page.draw_rect(fitz.Rect(x - 4, y - 4, x + 270, y + (84 if banner else 66)), color=(0.3, 0.3, 0.3), fill=(1, 1, 1), width=0.6)
-        if banner:
-            bc = (0.85, 0, 0) if result["reliability"] == "LOW" else (0.9, 0.5, 0)
-            page.insert_text((x, y + 78), f"RUN RELIABILITY: {result['reliability']} - " + ("DO NOT RELY ON THIS RUN" if result["reliability"] == "LOW" else "review flags with care"),
-                             fontsize=7, fontname="hebo", color=bc)
-        page.insert_text((x, y + 6), "BOM CHECK  (automated - verify before acting)", fontsize=6.5, fontname="hebo", color=(0, 0, 0))
-        for k, (name, c) in enumerate([("red = on drawing, missing in BOM", "red"), ("orange = qty / spec / revision mismatch", "orange"),
-                                       ("yellow = confirm match / extra / duplicate", "yellow"), ("blue = suggestion (implied item, rule-based)", "blue")]):
-            yy = y + 16 + 11 * k
-            page.draw_rect(fitz.Rect(x, yy - 6, x + 8, yy + 2), color=RGB[c], fill=RGB[c])
-            page.insert_text((x + 13, yy + 1), name, fontsize=6.3, fontname="helv", color=(0, 0, 0))
-
     # summary page
     sp = doc.new_page(width=595, height=842)
+    completeness = f"{result['completeness']:.1f}%" if result["completeness"] is not None else "n/a"
     lines = [f"BOM CHECK SUMMARY", "",
              f"Drawing : {os.path.basename(meta['drawing'])}   (Rev {drawing['revision'] or '?'})",
              f"BOM     : {os.path.basename(meta['bom'])}   (Rev {meta['bom_revision'] or '?'})",
@@ -145,7 +131,7 @@ def annotate_pdf(src, dst, drawing, result, meta):
              f"RUN RELIABILITY : {result['reliability']}" + ("".join("\n   - " + x for x in result["reliability_reasons"])), "",
              f"Drawing items checked : {result['n_drawing_items']}",
              f"BOM lines read        : {result['n_bom_rows']}",
-             f"BOM completeness      : {result['completeness']:.1f}%  (drawing items that have a BOM line)", ""]
+             f"BOM completeness      : {completeness}  (drawing items that have a BOM line)", ""]
     counts = {}
     for i in result["issues"]:
         counts[i["type"]] = counts.get(i["type"], 0) + 1
@@ -231,7 +217,9 @@ def write_bom_xlsx(src, dst, bom, drawing, result, meta):
             n = ws.cell(out_r, c, cell.value)
             n.font = arial
         iss = by_row.get(r, [])
-        if r in set(result["nondrawn_rows"]):
+        if result.get("comparison_skipped"):
+            status, note, color = "NOT CHECKED", "Extraction validation failed; this BOM line was not compared.", "grey"
+        elif r in set(result["nondrawn_rows"]):
             status, note, color = "NON-DRAWN ITEM", "Consumable/non-drawn line (not expected on the drawing); covered by rule-based check", "grey"
         elif iss:
             iss_sorted = sorted(iss, key=lambda i: SEV_ORDER[i["severity"]])
@@ -301,8 +289,21 @@ def write_bom_xlsx(src, dst, bom, drawing, result, meta):
 
 def write_json(dst, drawing, bom, result, meta):
     clean = [{k: v for k, v in i.items()} for i in result["issues"]]
+    status_by_row = {m["bom_row"]: m["status"] for m in result["matches"] if m["bom_row"] is not None}
+    for issue in clean:
+        if issue["bom_row"] is not None and issue["type"] in ("extra", "duplicate"):
+            status_by_row[issue["bom_row"]] = issue["type"].upper()
+    bom_rows = []
+    for row in result["bom_rows"]:
+        public_row = {k: v for k, v in row.items() if not k.startswith("_")}
+        public_row["status"] = ("NOT COMPARED" if row["row"] in result["nondrawn_rows"]
+                                else status_by_row.get(row["row"], "OK"))
+        bom_rows.append(public_row)
     with open(dst, "w") as f:
         json.dump(dict(meta=meta, reliability=result["reliability"], reliability_reasons=result["reliability_reasons"],
+                       extraction_errors=result.get("extraction_errors", []),
+                       extraction_warnings=result.get("extraction_warnings", []),
+                       comparison_skipped=result.get("comparison_skipped", False),
                        drawing_revision=drawing["revision"], bom_revision=bom["revision"], scanned=drawing["scanned"],
                        completeness=result["completeness"], n_drawing_items=result["n_drawing_items"], n_bom_rows=result["n_bom_rows"],
-                       matches=result["matches"], issues=clean), f, indent=2, default=str)
+                       bom_rows=bom_rows, matches=result["matches"], issues=clean), f, indent=2, default=str)

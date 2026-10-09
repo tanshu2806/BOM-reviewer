@@ -19,6 +19,11 @@ import pymupdf as fitz
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 ITEM_RE = re.compile(r"^[A-Za-z]{0,2}[-._]?[0-9]{1,4}(?:[-._][0-9A-Za-z]{1,4})?[A-Za-z]?$")
+QTY_RE = re.compile(
+    r"^\s*(?:\d{1,3}(?:,\d{3})+|\d+)(?:\.\d+)?\s*"
+    r"(?:nos?|pcs?|pieces?|sets?|each|ea|units?)?\s*$",
+    re.I,
+)
 REV_RES = [re.compile(r"\bDRG\.?\s*REV(?:ISION)?\.?\s*[:\-]?\s*([A-Z0-9]{1,2})\b"),
            re.compile(r"\bREV(?:ISION)?\.?\s*[:\-]?\s*([A-Z]|\d{1,2})\b")]
 
@@ -54,6 +59,11 @@ def find_revision(text):
 # ------------------------------------------------------------------------------ words
 def _mk_word(x0, y0, x1, y1, text, conf=100.0):
     return dict(x0=x0, y0=y0, x1=x1, y1=y1, text=text, conf=conf, xc=(x0 + x1) / 2, yc=(y0 + y1) / 2)
+
+
+def valid_quantity(value):
+    """Return whether a quantity cell contains only a number and an optional unit."""
+    return bool(QTY_RE.fullmatch(str(value or "")))
 
 
 def vector_words(page):
@@ -272,7 +282,7 @@ def ocr_table_words(img, frame, cfg):
         if not reg:
             return [], None, []
         x0, y0, x1, y1, lines, vmask = reg
-        m = int(6 * z)
+        m = int(2 * z)
         X0, Y0, X1, Y1 = max(0, x0 - m), max(0, y0 - m), min(img.shape[1], x1 + m), min(img.shape[0], y1 + m)
         crop = img[Y0:Y1, X0:X1].copy()
         crop[lines[Y0:Y1, X0:X1] > 0] = 255                     # erase grid lines so they do not confuse OCR
@@ -362,8 +372,12 @@ def parse_table(words, cfg, region_left=None, fuzzy=False, grid_x=None):
     for L in lines:
         h = _match_header(L, syns, fuzzy)
         canons = {c for c, _, _ in h}
-        need = 2 if grid_x else 3                                   # with a detected grid, the header only has to LABEL columns
-        if len(h) >= need and "description" in canons and "qty" in canons:
+        conventional = len(h) >= 3 and {"description", "qty"} <= canons
+        grid_header = bool(grid_x) and (
+            conventional
+            or (len(h) >= 3 and "item" in canons and canons & {"material", "size", "partno"})
+        )
+        if conventional or grid_header:
             hdr = (L, sorted(h, key=lambda t: t[1])); break
     if not hdr:
         return None
@@ -381,11 +395,52 @@ def parse_table(words, cfg, region_left=None, fuzzy=False, grid_x=None):
         names = [l[0] for l in lab]
         if "item" not in names and names[0] is None:
             lab[0][0] = "item"
-        if "description" in names and "qty" in names:
-            di, qi = names.index("description"), names.index("qty")
-            gap = [k for k in range(di + 1, qi) if lab[k][0] is None]
-            if len(gap) == 1 and "material" not in names:
-                lab[gap[0]][0] = "material"
+
+        def grid_cell_text(line, index):
+            left, right = edges[index], edges[index + 1]
+            return " ".join(w["text"] for w in line["words"] if left <= w["xc"] < right).strip()
+
+        body_lines = [line for line in lines if line["yc"] > hline["yc"] + 1]
+        item_col = next((i for i, value in enumerate(lab) if value[0] == "item"), None)
+        if item_col is None and lab and edges[1] - edges[0] < 0.18 * (edges[-1] - edges[0]):
+            lab[0][0] = "item"
+            item_col = 0
+
+        names = [value[0] for value in lab]
+        if "description" not in names:
+            material_col = next((i for i, value in enumerate(lab) if value[0] in ("material", "size", "qty", "partno", "remarks")), len(lab))
+            candidates = []
+            for i in range((item_col + 1) if item_col is not None else 0, material_col):
+                values = [grid_cell_text(line, i) for line in body_lines]
+                text_rows = [value for value in values if re.search(r"[A-Za-z]{2,}", value)]
+                if len(text_rows) >= 2 or (
+                    len(text_rows) == 1
+                    and edges[i + 1] - edges[i] >= 0.2 * (edges[-1] - edges[0])
+                ):
+                    candidates.append((len(text_rows), sum(map(len, text_rows)), i))
+            if candidates:
+                _, _, description_col = max(candidates)
+                lab[description_col][0] = "description"
+
+        names = [value[0] for value in lab]
+        if "qty" not in names:
+            size_col = next((i for i, value in enumerate(lab) if value[0] == "size"), None)
+            partno_col = next((i for i, value in enumerate(lab) if value[0] in ("partno", "remarks")), len(lab))
+            start_col = (size_col + 1) if size_col is not None else (
+                next((i + 1 for i, value in enumerate(lab) if value[0] == "material"), 0)
+            )
+            candidates = []
+            for i in range(start_col, partno_col):
+                values = [grid_cell_text(line, i) for line in body_lines]
+                filled = [value for value in values if value]
+                numeric = sum(valid_quantity(value) for value in filled)
+                if filled and numeric / len(filled) >= 0.6 and (
+                    len(filled) >= 2 or len(body_lines) == 1
+                ):
+                    candidates.append((numeric / len(filled), len(filled), i))
+            if candidates:
+                _, _, qty_col = max(candidates)
+                lab[qty_col][0] = "qty"
         bounds = [(c, l, r) for c, l, r in lab if c]
     if not bounds:
         for i, (canon, x0, x1) in enumerate(cols):
@@ -408,10 +463,12 @@ def parse_table(words, cfg, region_left=None, fuzzy=False, grid_x=None):
 
     item_i = next((i for i, b in enumerate(bounds) if b[0] == "item"), 0)
     qty_i = next((i for i, b in enumerate(bounds) if b[0] == "qty"), None)
+    description_i = next((i for i, b in enumerate(bounds) if b[0] == "description"), None)
+
     def row_evidence(side):
         return sum(
-            bool(ITEM_RE.match(cell_text(L, item_i)[0].strip()))
-            or (qty_i is not None and bool(cell_text(L, qty_i)[0].strip()))
+            any(ITEM_RE.fullmatch(w["text"].strip()) for w in cell_text(L, item_i)[1])
+            or (qty_i is not None and valid_quantity(cell_text(L, qty_i)[0].strip()))
             for L in side
         )
 
@@ -461,13 +518,19 @@ def parse_table(words, cfg, region_left=None, fuzzy=False, grid_x=None):
         if pitches and gap > 2.2 * statistics.median(pitches):
             break                                   # table ended (gap to next text block)
         item_txt = cell_text(L, item_i)[0].strip()
-        has_qty = qty_i is not None and bool(cell_text(L, qty_i)[0].strip())
-        id_ok = bool(ITEM_RE.match(item_txt))
-        if id_ok or has_qty:                        # a line with a quantity is a row even if OCR garbled its item number
+        qty_txt = cell_text(L, qty_i)[0].strip() if qty_i is not None else ""
+        desc_txt = cell_text(L, description_i)[0].strip() if description_i is not None else ""
+        id_ok = bool(ITEM_RE.fullmatch(item_txt))
+        if id_ok or item_txt or qty_txt:
             r = dict(fields={}, words=[], y0=1e9, y1=0, id_unreadable=not id_ok)
             rows.append(r)
             if prev_yc != hline["yc"]:
                 pitches.append(gap)
+        elif rows and not item_txt and desc_txt and (not pitches or gap <= 1.4 * statistics.median(pitches)):
+            r = rows[-1]
+        elif not rows and desc_txt:
+            r = dict(fields={}, words=[], y0=1e9, y1=0, id_unreadable=True)
+            rows.append(r)
         elif rows and not item_txt and (not pitches or gap <= 1.4 * statistics.median(pitches)):
             r = rows[-1]                            # continuation line (wrapped cell)
         else:
@@ -484,21 +547,43 @@ def parse_table(words, cfg, region_left=None, fuzzy=False, grid_x=None):
         return None
     right = max(w["x1"] for r in rows for w in r["words"]) + 2
     out = []
-    last_num = None
     for r in rows:
         f = r["fields"]
         rid = f.get("item", "").strip()
-        inferred = False
-        if r["id_unreadable"]:
-            rid = str(last_num + 1) if last_num is not None else "?"
-            inferred = True
-        if rid.isdigit():
-            last_num = int(rid)
-        out.append(dict(id=rid, id_inferred=inferred, description=f.get("description", ""), material=f.get("material", ""),
+        if not ITEM_RE.fullmatch(rid):
+            rid = ""
+        out.append(dict(id=rid, id_inferred=False, id_unreadable=r["id_unreadable"],
+                        description=f.get("description", ""), material=f.get("material", ""),
                         size=f.get("size", ""), qty=f.get("qty", ""), partno=f.get("partno", ""), remarks=f.get("remarks", ""),
                         bbox=(table_left - 1, r["y0"] - 1.5, right, r["y1"] + 1.5),
                         conf=min(w["conf"] for w in r["words"])))
     return dict(columns=[b[0] for b in bounds], rows=out, header_bbox=(table_left - 1, hline["words"][0]["y0"] - 1.5, right, hline["words"][0]["y1"] + 1.5))
+
+
+def validate_table(table):
+    """Return structural errors and non-fatal identifier warnings for an extracted parts table."""
+    columns = set(table.get("columns", []))
+    rows = table.get("rows", [])
+    errors = []
+    warnings = []
+    if "description" not in columns:
+        errors.append("the parts-table description column could not be identified")
+    if not rows:
+        errors.append("the parts-table header was found but no component rows were extracted")
+    for index, row in enumerate(rows, start=1):
+        description = str(row.get("description") or "").strip()
+        if not re.search(r"[A-Za-z]{2,}", description):
+            errors.append(f"component row {index} has no meaningful description")
+        if "qty" in columns and not valid_quantity(row.get("qty")):
+            errors.append(f"component row {index} has an invalid or unreadable quantity")
+    if "item" in columns and rows:
+        unreadable = sum(not ITEM_RE.fullmatch(str(row.get("id") or "").strip()) for row in rows)
+        if unreadable:
+            warnings.append(
+                f"{unreadable} of {len(rows)} drawing item identifiers are unreadable; "
+                "identifier-based linking is unavailable for those rows"
+            )
+    return errors, warnings
 
 
 def infer_grid_header(words, grid_x):
@@ -573,12 +658,14 @@ def parse_table_fallback(words, cfg):
             rid = first
             rest_words = L["words"][1:]
             desc = " ".join(w["text"] for w in rest_words if not w["text"].isdigit())
+            if not desc:
+                continue
             qty_word = next((w["text"] for w in rest_words if w["text"].isdigit()), "1")
             x0 = min(w["x0"] for w in L["words"])
             x1 = max(w["x1"] for w in L["words"])
             y0 = min(w["y0"] for w in L["words"])
             y1 = max(w["y1"] for w in L["words"])
-            candidate_rows.append(dict(id=rid, id_inferred=False, description=desc or "Part", material="",
+            candidate_rows.append(dict(id=rid, id_inferred=False, description=desc, material="",
                                        size="", qty=qty_word, partno="", remarks="",
                                        bbox=(x0 - 2, y0 - 1.5, x1 + 2, y1 + 1.5), conf=100.0))
     if len(candidate_rows) >= 2:
@@ -655,6 +742,7 @@ def scan_balloons(img, frame, cfg):
 def read_drawing(path, cfg):
     doc = fitz.open(path)
     pages, scanned_any = [], False
+    extraction_errors, extraction_warnings = [], []
     for pno, page in enumerate(doc):
         words = vector_words(page)
         scanned = len(words) < 20
@@ -672,20 +760,34 @@ def read_drawing(path, cfg):
                     words = [w for w in words if not (rx0 <= w["xc"] <= rx1 and ry0 <= w["yc"] <= ry1)] + tw
             except Exception:
                 pass
-        table = parse_table(words, cfg, region_left=(region[0] if scanned and tw else None), fuzzy=scanned, grid_x=(grid_x if scanned and tw else None))
+        table_source = tw if scanned and tw else words
+        table = parse_table(table_source, cfg, region_left=(region[0] if scanned and tw else None), fuzzy=scanned, grid_x=(grid_x if scanned and tw else None))
         if table is None and scanned and tw and grid_x:
             synthetic_header = infer_grid_header(tw, grid_x)
             if synthetic_header:
-                table_words = [w for w in words if region and region[0] <= w["xc"] <= region[2] and region[1] <= w["yc"] <= region[3]]
+                table_words = tw
                 table = parse_table(table_words + synthetic_header, cfg, region_left=region[0], fuzzy=True, grid_x=grid_x)
         if table is None:
             table = parse_table_fallback(words, cfg)
+            if table is not None:
+                extraction_errors.append(
+                    f"Page {pno + 1}: no recognizable parts-table header; the headerless fallback cannot be safely compared."
+                )
+        page_errors, page_warnings = validate_table(table) if table is not None else ([], [])
+        if scanned and tw and table is None:
+            page_errors.append(
+                f"Page {pno + 1}: a table-like region was detected, but its header and columns could not be identified."
+            )
+        extraction_errors.extend(f"Page {pno + 1}: {message}" for message in page_errors)
+        extraction_warnings.extend(f"Page {pno + 1}: {message}" for message in page_warnings)
         balloons = scan_balloons(img, frame, cfg) if scanned else vector_balloons(page, words)
         text = " ".join(w["text"] for w in sorted(words, key=lambda w: (round(w["yc"] / 4), w["x0"])))
         pages.append(dict(page=pno, scanned=scanned, table=table, balloons=balloons, text=text, words=words,
+                          extraction_errors=page_errors, extraction_warnings=page_warnings,
                           size=(page.rect.width, page.rect.height)))
     all_text = " ".join(p["text"] for p in pages)
-    return dict(path=path, pages=pages, scanned=scanned_any, revision=find_revision(all_text), text=all_text)
+    return dict(path=path, pages=pages, scanned=scanned_any, revision=find_revision(all_text), text=all_text,
+                extraction_errors=extraction_errors, extraction_warnings=extraction_warnings)
 
 
 # ------------------------------------------------------------------------------ BOM

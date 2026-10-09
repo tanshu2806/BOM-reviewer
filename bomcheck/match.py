@@ -14,6 +14,7 @@ Issue types (O-Q-S-E-R-D + L3):
 """
 import re
 from rapidfuzz import fuzz
+from bomcheck.extract import valid_quantity, validate_table
 
 NUM_RE = re.compile(r"\d+(?:\.\d+)?(?:/\d+)?")
 TOK_RE = re.compile(r"\d+(?:\.\d+)?(?:/\d+)?|[a-z]+")
@@ -53,9 +54,9 @@ def compact_material(s):
 
 
 def parse_qty(v):
-    if v is None or str(v).strip() == "":
+    if v is None or not valid_quantity(v):
         return None
-    m = NUM_RE.search(str(v).replace(",", ""))
+    m = re.match(r"\s*([\d,]+(?:\.\d+)?)", str(v))
     return float(m.group()) if m else None
 
 
@@ -146,6 +147,49 @@ def compare(drawing, bom, cfg):
     cand = [b for b in brows if not non_drawn.search(b["description"] + " " + b["remarks"])]
     nd_rows = [b for b in brows if b not in cand]
 
+    extraction_errors = list(drawing.get("extraction_errors", []))
+    extraction_warnings = list(drawing.get("extraction_warnings", []))
+    for p in drawing["pages"]:
+        if p.get("table"):
+            table_errors, table_warnings = validate_table(p["table"])
+            extraction_errors.extend(f"Page {p['page'] + 1}: {message}" for message in table_errors)
+            extraction_warnings.extend(f"Page {p['page'] + 1}: {message}" for message in table_warnings)
+    bom_columns = set(bom.get("colidx", {}).values())
+    if not {"description", "qty"} <= bom_columns:
+        extraction_errors.append("The BOM is missing a recognized Description or Qty column.")
+    for row in brows:
+        if not re.search(r"[A-Za-z]{2,}", row["description"]):
+            extraction_errors.append(f"BOM row {row['row']} has no meaningful description.")
+        if "qty" in bom_columns and not valid_quantity(row.get("qty")):
+            extraction_errors.append(f"BOM row {row['row']} has an invalid or unreadable quantity.")
+    if not ditems and not balloon_by_id:
+        extraction_errors.append("No usable drawing parts table or numbered balloons were extracted.")
+
+    if extraction_errors:
+        reasons = list(dict.fromkeys(extraction_errors + extraction_warnings))
+        reasons.append("Comparison skipped because extraction validation failed; no omission or extra findings were generated.")
+        return dict(
+            reliability="LOW",
+            reliability_reasons=reasons,
+            mean_ocr_conf=round(
+                sum(d.get("conf", 100.0) for d in ditems) / len(ditems), 1
+            ) if ditems else 0.0,
+            linked_fraction=0.0,
+            issues=[],
+            matches=[],
+            ditems=ditems,
+            bom_rows=brows,
+            nondrawn_rows=[b["row"] for b in nd_rows],
+            completeness=None,
+            n_drawing_items=len(ditems),
+            n_bom_rows=len(brows),
+            n_balloons=len(balloon_by_id),
+            balloon_only=balloon_only,
+            extraction_errors=list(dict.fromkeys(extraction_errors)),
+            extraction_warnings=list(dict.fromkeys(extraction_warnings)),
+            comparison_skipped=True,
+        )
+
     # ---- one-to-one assignment, best score first
     pairs = sorted(((score(d, b, cfg), i, j) for i, d in enumerate(ditems) for j, b in enumerate(cand)), key=lambda t: -t[0])
     d_to_b, b_used = {}, set()
@@ -173,8 +217,9 @@ def compare(drawing, bom, cfg):
         issues.append(iss)
 
     for i, d in enumerate(ditems):
+        item_label = f"Item {d['id']}" if d.get("id") else "Drawing component"
         if i not in d_to_b:
-            add("omission", "red", f"Item {d['id']} '{d['description']}' (qty {d.get('qty','?')}) is on the drawing but has no BOM line", d=d)
+            add("omission", "red", f"{item_label} '{d['description']}' (qty {d.get('qty','?')}) is on the drawing but has no BOM line", d=d)
             matches.append(dict(drawing_id=d["id"], bom_row=None, score=0, status="MISSING"))
             continue
         j, sc = d_to_b[i]
@@ -187,13 +232,13 @@ def compare(drawing, bom, cfg):
                 exp = d["_qty"] * n_mult
                 if abs(b["_qty"] - exp) > 1e-9:
                     if abs(b["_qty"] - d["_qty"]) < 1e-9:
-                        add("multiplier", "orange", f"Item {d['id']}: drawing note says qty is per bank, x{n_mult}; BOM has {b['_qty']:g} but total should be {exp:g}", d=d, b=b,
+                        add("multiplier", "orange", f"{item_label}: drawing note says qty is per bank, x{n_mult}; BOM has {b['_qty']:g} but total should be {exp:g}", d=d, b=b,
                             extra=dict(drawing_qty=d["_qty"], bom_qty=b["_qty"], expected=exp))
                     else:
-                        add("quantity", "orange", f"Item {d['id']}: quantity differs (drawing {d['_qty']:g} per bank x{n_mult} = {exp:g}, BOM {b['_qty']:g})", d=d, b=b)
+                        add("quantity", "orange", f"{item_label}: quantity differs (drawing {d['_qty']:g} per bank x{n_mult} = {exp:g}, BOM {b['_qty']:g})", d=d, b=b)
                     flagged = True; status = "QTY"
             elif abs(d["_qty"] - b["_qty"]) > 1e-9:
-                add("quantity", "orange", f"Item {d['id']}: quantity differs (drawing {d['_qty']:g}, BOM {b['_qty']:g})", d=d, b=b,
+                add("quantity", "orange", f"{item_label}: quantity differs (drawing {d['_qty']:g}, BOM {b['_qty']:g})", d=d, b=b,
                     extra=dict(drawing_qty=d["_qty"], bom_qty=b["_qty"]))
                 flagged = True; status = "QTY"
         # spec: real numeric conflict (both sides carry a value the other lacks) or material mismatch
@@ -204,11 +249,11 @@ def compare(drawing, bom, cfg):
         if d["_mat"] and b["_mat"] and fuzz.ratio(d["_mat"], b["_mat"]) < th["material_ratio"]:
             spec_msgs.append(f"material: drawing '{d.get('material')}' vs BOM '{b.get('material')}'")
         if spec_msgs:
-            add("spec", "orange", f"Item {d['id']}: specification mismatch - " + "; ".join(spec_msgs), d=d, b=b)
+            add("spec", "orange", f"{item_label}: specification mismatch - " + "; ".join(spec_msgs), d=d, b=b)
             flagged = True; status = "SPEC" if status == "OK" else status + "+SPEC"
         # probable-match band
         if sc < th["match"] and not flagged:
-            add("confirm", "yellow", f"Item {d['id']}: probable match to BOM row {b['row']} (score {sc:.0f}) - please confirm", d=d, b=b)
+            add("confirm", "yellow", f"{item_label}: probable match to BOM row {b['row']} (score {sc:.0f}) - please confirm", d=d, b=b)
             status = "CONFIRM"
         matches.append(dict(drawing_id=d["id"], bom_row=b["row"], score=round(sc, 1), status=status))
 
@@ -259,7 +304,7 @@ def compare(drawing, bom, cfg):
     confs = [d.get("conf", 100.0) for d in ditems]
     mean_conf = sum(confs) / len(confs) if confs else 0.0
     frac = (len(b_used) / len(cand)) if cand else 0.0
-    reasons = []
+    reasons = list(dict.fromkeys(extraction_warnings))
     if n_d < rel.get("min_rows", 3):
         reasons.append(f"only {n_d} parts-table rows were read")
     if frac < rel.get("min_match_fraction", 0.5):
@@ -274,4 +319,6 @@ def compare(drawing, bom, cfg):
         reliability = "HIGH"
     return dict(reliability=reliability, reliability_reasons=reasons, mean_ocr_conf=round(mean_conf, 1), linked_fraction=round(frac, 3),issues=issues, matches=matches, ditems=ditems, bom_rows=brows, nondrawn_rows=[b["row"] for b in nd_rows],
                 completeness=(100.0 * (n_d - n_missing) / n_d) if n_d else None, n_drawing_items=n_d, n_bom_rows=len(brows),
-                n_balloons=len(balloon_by_id), balloon_only=balloon_only)
+                n_balloons=len(balloon_by_id), balloon_only=balloon_only,
+                extraction_errors=[], extraction_warnings=list(dict.fromkeys(extraction_warnings)),
+                comparison_skipped=False)

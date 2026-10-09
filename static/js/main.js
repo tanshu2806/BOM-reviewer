@@ -217,8 +217,10 @@ document.addEventListener('DOMContentLoaded', () => {
     runIdVal.textContent = data.run_id;
 
     // Completeness Gauge
-    const compVal = report.completeness || 0;
-    completenessVal.textContent = compVal.toFixed(1);
+    const hasCompleteness = report.completeness != null;
+    const compVal = hasCompleteness ? report.completeness : 0;
+    completenessVal.textContent = hasCompleteness ? compVal.toFixed(1) : 'N/A';
+    document.getElementById('completenessUnit').textContent = hasCompleteness ? '%' : '';
     circleFill.setAttribute('stroke-dasharray', `${compVal}, 100`);
 
     // Counts
@@ -344,24 +346,108 @@ document.addEventListener('DOMContentLoaded', () => {
   function renderBomTable(report) {
     bomTableBody.innerHTML = '';
     const bomRows = report.bom_rows || [];
+    const rowIssues = new Map();
+    (report.issues || []).forEach(issue => {
+      if (issue.bom_row == null) return;
+      const key = String(issue.bom_row);
+      rowIssues.set(key, [...(rowIssues.get(key) || []), issue]);
+    });
     
     if (bomRows.length === 0) {
-      bomTableBody.innerHTML = `<tr><td colspan="6" style="text-align:center; color: var(--text-muted);">No BOM rows extracted.</td></tr>`;
-      return;
+      const tr = document.createElement('tr');
+      const td = document.createElement('td');
+      td.colSpan = 7;
+      td.textContent = 'No BOM rows extracted.';
+      td.style.textAlign = 'center';
+      td.style.color = 'var(--text-muted)';
+      tr.appendChild(td);
+      bomTableBody.appendChild(tr);
     }
 
     bomRows.forEach(row => {
+      const status = row.status || 'OK';
+      const normalizedStatus = status.toUpperCase();
+      const tone = normalizedStatus.includes('QTY') || normalizedStatus.includes('SPEC')
+        ? 'orange'
+        : ['CONFIRM', 'EXTRA', 'DUPLICATE'].some(value => normalizedStatus.includes(value))
+          ? 'yellow'
+          : normalizedStatus === 'OK'
+            ? 'green'
+            : 'neutral';
+      const issues = rowIssues.get(String(row.row)) || [];
       const tr = document.createElement('tr');
-      tr.innerHTML = `
-        <td><strong>${row.item || row.item_no || '-'}</strong></td>
-        <td>${row.partno || row.part_no || '-'}</td>
-        <td>${row.description || '-'}</td>
-        <td>${row.material || '-'}</td>
-        <td>${row.qty || '-'}</td>
-        <td><span class="badge-tag">${row.status || 'OK'}</span></td>
-      `;
+      tr.className = `bom-row bom-row-${tone}`;
+      if (issues.length) tr.classList.add('bom-row-issue');
+
+      const values = [
+        row.item || row.item_no || row.id || '-',
+        row.partno || row.part_no || '-',
+        row.description || '-',
+        row.material || '-',
+        row.qty || '-'
+      ];
+      values.forEach((value, index) => {
+        const td = document.createElement('td');
+        td.textContent = value;
+        if (index === 0) {
+          const strong = document.createElement('strong');
+          strong.textContent = value;
+          td.textContent = '';
+          td.appendChild(strong);
+        }
+        tr.appendChild(td);
+      });
+
+      const statusCell = document.createElement('td');
+      const badge = document.createElement('span');
+      badge.className = `bom-status bom-status-${tone}`;
+      badge.textContent = status;
+      statusCell.appendChild(badge);
+      tr.appendChild(statusCell);
+
+      const problemCell = document.createElement('td');
+      problemCell.className = 'bom-problem';
+      problemCell.textContent = issues.length
+        ? issues.map(issue => issue.message).join(' ')
+        : (tone === 'neutral' ? 'Not compared' : '-');
+      tr.appendChild(problemCell);
       bomTableBody.appendChild(tr);
     });
+
+    (report.issues || [])
+      .filter(issue => issue.type === 'omission' && issue.bom_row == null)
+      .forEach(issue => {
+        const tr = document.createElement('tr');
+        tr.className = 'bom-row bom-row-red bom-row-issue';
+        [
+          issue.drawing_id || '-',
+          '-',
+          issue.drawing_desc || '(drawing item)',
+          '-',
+          '-'
+        ].forEach((value, index) => {
+          const td = document.createElement('td');
+          td.textContent = value;
+          if (index === 0) {
+            const strong = document.createElement('strong');
+            strong.textContent = value;
+            td.textContent = '';
+            td.appendChild(strong);
+          }
+          tr.appendChild(td);
+        });
+        const statusCell = document.createElement('td');
+        const badge = document.createElement('span');
+        badge.className = 'bom-status bom-status-red';
+        badge.textContent = 'MISSING IN BOM';
+        statusCell.appendChild(badge);
+        tr.appendChild(statusCell);
+        const problemCell = document.createElement('td');
+        problemCell.className = 'bom-problem';
+        problemCell.textContent = issue.message;
+        tr.appendChild(problemCell);
+        bomTableBody.appendChild(tr);
+      });
   }
 
   // --- Tabs Navigation ---

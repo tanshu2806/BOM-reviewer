@@ -95,7 +95,7 @@ def run_bom_check():
         except Exception as ex:
             import traceback
             traceback.print_exc()
-            return jsonify({"status": "error", "message": f"Pipeline execution failed: {str(ex)}"}), 200
+            return jsonify({"status": "error", "message": f"Pipeline execution failed: {str(ex)}"}), 500
 
         stem = drawing_path.stem
         annotated_pdf = out_dir / f"{stem}_annotated.pdf"

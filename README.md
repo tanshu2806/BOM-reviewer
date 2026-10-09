@@ -42,11 +42,23 @@ Outputs (in `--out`):
 
 | File | What it is |
 |---|---|
-| `<drawing>_annotated.pdf` | The **original drawing** with coloured boxes + labels on every flagged item, a legend, and a summary page |
+| `<drawing>_annotated.pdf` | The **original drawing** with coloured boxes + labels on flagged items, followed by a summary page with findings and run reliability. No legend/warning panel is drawn over the source pages. |
 | `<drawing>_BOM_checked.xlsx` | Colour-coded BOM with **Check status / Check note** columns, **inserted red "MISSING – ADD TO BOM" rows**, plus `Discrepancies` and `Summary` sheets |
 | `<drawing>_report.json` | Machine-readable result |
 
 Colours: 🔴 on drawing but missing in BOM · 🟠 quantity / spec / revision mismatch · 🟡 confirm match / extra line / duplicate · 🔵 rule-based suggestion (implied item) · 🟢 OK · ⚪ non-drawn item (consumable)
+
+## Prototype demo samples
+
+`demo/prototype_samples/` contains three fictional, vector engineering drawing/BOM pairs with title blocks, equipment details, parts lists, and callouts:
+
+| Pair | Equipment | Demonstration |
+|---|---|---|
+| `01_process_pump_skid` | Horizontal process pump skid | Mostly clean comparison |
+| `02_shell_tube_exchanger` | Sectioned shell-and-tube exchanger with a packed floating head | 38 numbered components on a two-sheet drawing; missing BOM line, quantity mismatch, and material mismatch |
+| `03_vertical_air_receiver` | Vertical compressed-air receiver | Missing BOM line, quantity mismatch, and extra spare item |
+
+The drawings and workbooks are synthetic prototype data, marked **NOT FOR FABRICATION**. Rebuild them with `python samples/generate_prototype_samples.py`.
 
 ## Pipeline (I-E-N-M-C-H)
 

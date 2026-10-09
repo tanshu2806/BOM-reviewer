@@ -832,6 +832,65 @@ h1, h2, h3, h4, h5, h6 {
   background: var(--bg-subtle);
 }
 
+.custom-table tbody tr.bom-row-issue.bom-row-orange {
+  background: var(--bg-orange-light);
+  box-shadow: inset 4px 0 var(--color-orange);
+}
+
+.custom-table tbody tr.bom-row-issue.bom-row-yellow {
+  background: var(--bg-yellow-light);
+  box-shadow: inset 4px 0 var(--color-yellow);
+}
+
+.custom-table tbody tr.bom-row-issue.bom-row-red {
+  background: var(--bg-red-light);
+  box-shadow: inset 4px 0 var(--color-red);
+}
+
+.custom-table tbody tr.bom-row-neutral {
+  color: var(--text-muted);
+}
+
+.bom-status {
+  display: inline-block;
+  padding: 0.2rem 0.55rem;
+  border-radius: var(--radius-full);
+  font-size: 0.72rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.bom-status-orange {
+  color: #c2410c;
+  background: var(--bg-orange-light);
+}
+
+.bom-status-yellow {
+  color: #a16207;
+  background: var(--bg-yellow-light);
+}
+
+.bom-status-red {
+  color: #b91c1c;
+  background: var(--bg-red-light);
+}
+
+.bom-status-green {
+  color: #047857;
+  background: var(--bg-emerald-light);
+}
+
+.bom-status-neutral {
+  color: var(--text-secondary);
+  background: var(--bg-subtle);
+}
+
+.bom-problem {
+  min-width: 260px;
+  color: var(--text-secondary);
+  font-size: 0.82rem;
+}
+
 /* JSON Code Viewer */
 .json-header {
   display: flex;
