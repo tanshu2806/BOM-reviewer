@@ -177,7 +177,15 @@ document.addEventListener('DOMContentLoaded', () => {
       method: 'POST',
       body: formData
     })
-    .then(res => res.json())
+    .then(async res => {
+      const contentType = res.headers.get('content-type') || '';
+      if (contentType.includes('application/json')) {
+        return res.json();
+      } else {
+        const text = await res.text();
+        throw new Error(`Server response error (${res.status}): ${text.slice(0, 180)}`);
+      }
+    })
     .then(data => {
       loadingOverlay.classList.add('hidden');
       if (data.status === 'success') {
@@ -188,7 +196,7 @@ document.addEventListener('DOMContentLoaded', () => {
     })
     .catch(err => {
       loadingOverlay.classList.add('hidden');
-      showError(`Network/Server Error: ${err.message}`);
+      showError(`Verification Error: ${err.message}`);
     });
   }
 
