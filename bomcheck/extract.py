@@ -11,13 +11,14 @@ Design notes
   * Assumption (config/ASSUMPTION D9): data cells are left-aligned under their header text.
 """
 import json, os, re, statistics
+os.environ["KMP_DUPLICATE_LIB_OK"] = "TRUE"
 from rapidfuzz import fuzz
 import warnings
 warnings.filterwarnings("ignore")
 import pymupdf as fitz
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-ITEM_RE = re.compile(r"^[A-Za-z]?\d{1,3}(?:-\d{1,3})?[A-Za-z]?$")
+ITEM_RE = re.compile(r"^[A-Za-z]{0,2}[-._]?[0-9]{1,4}(?:[-._][0-9A-Za-z]{1,4})?[A-Za-z]?$")
 REV_RES = [re.compile(r"\bDRG\.?\s*REV(?:ISION)?\.?\s*[:\-]?\s*([A-Z0-9]{1,2})\b"),
            re.compile(r"\bREV(?:ISION)?\.?\s*[:\-]?\s*([A-Z]|\d{1,2})\b")]
 
@@ -108,21 +109,92 @@ def render_gray(page, dpi):
     return np.frombuffer(pix.samples, dtype=np.uint8).reshape(pix.h, pix.w).copy(), z
 
 
+_TESSERACT_CMD = None
+_EASYOCR_READER = None
+
+
+def _get_tesseract():
+    global _TESSERACT_CMD
+    if _TESSERACT_CMD is not None:
+        return _TESSERACT_CMD
+    import shutil
+    cmd = shutil.which("tesseract")
+    if cmd:
+        _TESSERACT_CMD = cmd
+        return cmd
+    candidates = [
+        r"C:\Program Files\Tesseract-OCR\tesseract.exe",
+        r"C:\Program Files (x86)\Tesseract-OCR\tesseract.exe",
+        os.path.expanduser(r"~\AppData\Local\Programs\Tesseract-OCR\tesseract.exe"),
+        r"D:\Program Files\Tesseract-OCR\tesseract.exe",
+    ]
+    for c in candidates:
+        if os.path.exists(c):
+            try:
+                import pytesseract
+                pytesseract.pytesseract.tesseract_cmd = c
+                _TESSERACT_CMD = c
+                return c
+            except Exception:
+                pass
+    return None
+
+
+def _get_easyocr():
+    global _EASYOCR_READER
+    if _EASYOCR_READER is not None:
+        return _EASYOCR_READER if _EASYOCR_READER is not False else None
+    try:
+        import easyocr
+        _EASYOCR_READER = easyocr.Reader(['en'], gpu=False)
+        return _EASYOCR_READER
+    except Exception:
+        _EASYOCR_READER = False
+        return None
+
+
 def ocr_words(img, frame, cfg):
-    import pytesseract
-    from pytesseract import Output
-    d = pytesseract.image_to_data(img, config=f"--psm {cfg['ocr']['psm']}", output_type=Output.DICT)
-    words = []
-    for i, t in enumerate(d["text"]):
-        t = t.strip()
-        if not t:
-            continue
-        conf = float(d["conf"][i])
-        if conf < cfg["thresholds"]["ocr_min_conf"]:
-            continue
-        x, y, w, h = d["left"][i], d["top"][i], d["width"][i], d["height"][i]
-        words.append(_mk_word(*frame.box(x, y, x + w, y + h), t, conf))
-    return words
+    tess = _get_tesseract()
+    if tess:
+        try:
+            import pytesseract
+            from pytesseract import Output
+            pytesseract.pytesseract.tesseract_cmd = tess
+            d = pytesseract.image_to_data(img, config=f"--psm {cfg['ocr']['psm']}", output_type=Output.DICT)
+            words = []
+            for i, t in enumerate(d["text"]):
+                t = t.strip()
+                if not t:
+                    continue
+                conf = float(d["conf"][i])
+                if conf < cfg["thresholds"]["ocr_min_conf"]:
+                    continue
+                x, y, w, h = d["left"][i], d["top"][i], d["width"][i], d["height"][i]
+                words.append(_mk_word(*frame.box(x, y, x + w, y + h), t, conf))
+            if words:
+                return words
+        except Exception:
+            pass
+
+    reader = _get_easyocr()
+    if reader:
+        try:
+            results = reader.readtext(img)
+            words = []
+            for bbox, text, conf in results:
+                t = text.strip()
+                c = float(conf * 100 if conf <= 1.0 else conf)
+                if not t or c < cfg["thresholds"]["ocr_min_conf"]:
+                    continue
+                xs = [p[0] for p in bbox]
+                ys = [p[1] for p in bbox]
+                x0, y0, x1, y1 = min(xs), min(ys), max(xs), max(ys)
+                words.append(_mk_word(*frame.box(x0, y0, x1, y1), t, c))
+            return words
+        except Exception:
+            pass
+
+    return []
 
 
 def find_table_region(img, z):
@@ -188,38 +260,45 @@ def find_table_region(img, z):
 
 
 def ocr_table_words(img, frame, cfg):
-    import cv2, pytesseract
-    from pytesseract import Output
-    z = frame.z
-    reg = find_table_region(img, z)
-    if not reg:
+    tess = _get_tesseract()
+    if not tess:
         return [], None, []
-    x0, y0, x1, y1, lines, vmask = reg
-    m = int(6 * z)
-    X0, Y0, X1, Y1 = max(0, x0 - m), max(0, y0 - m), min(img.shape[1], x1 + m), min(img.shape[0], y1 + m)
-    crop = img[Y0:Y1, X0:X1].copy()
-    crop[lines[Y0:Y1, X0:X1] > 0] = 255                     # erase grid lines so they do not confuse OCR
-    f = 1.6
-    crop = cv2.resize(crop, None, fx=f, fy=f, interpolation=cv2.INTER_CUBIC)
-    d = pytesseract.image_to_data(crop, config="--psm 6", output_type=Output.DICT)
-    words = []
-    for i, t in enumerate(d["text"]):
-        t = t.strip()
-        if not t or float(d["conf"][i]) < cfg["thresholds"]["ocr_min_conf"]:
-            continue
-        x, y, w, h = d["left"][i] / f + X0, d["top"][i] / f + Y0, d["width"][i] / f, d["height"][i] / f
-        words.append(_mk_word(*frame.box(x, y, x + w, y + h), t, float(d["conf"][i])))
-    import numpy as np
-    proj = (vmask[y0:y1, x0:x1] > 0).sum(axis=0)
-    xs = np.where(proj > 0.6 * (y1 - y0))[0]                       # columns where a vertical rule spans most of the table height
-    groups = []
-    for x in xs:
-        if groups and x - groups[-1][-1] <= 6:
-            groups[-1].append(x)
-        else:
-            groups.append([x])
-    grid_x = [frame.pt(x0 + float(np.mean(g)), (y0 + y1) / 2)[0] for g in groups]
-    return words, frame.box(X0, Y0, X1, Y1), grid_x
+    try:
+        import cv2, pytesseract
+        from pytesseract import Output
+        pytesseract.pytesseract.tesseract_cmd = tess
+        z = frame.z
+        reg = find_table_region(img, z)
+        if not reg:
+            return [], None, []
+        x0, y0, x1, y1, lines, vmask = reg
+        m = int(6 * z)
+        X0, Y0, X1, Y1 = max(0, x0 - m), max(0, y0 - m), min(img.shape[1], x1 + m), min(img.shape[0], y1 + m)
+        crop = img[Y0:Y1, X0:X1].copy()
+        crop[lines[Y0:Y1, X0:X1] > 0] = 255                     # erase grid lines so they do not confuse OCR
+        f = 1.6
+        crop = cv2.resize(crop, None, fx=f, fy=f, interpolation=cv2.INTER_CUBIC)
+        d = pytesseract.image_to_data(crop, config="--psm 6", output_type=Output.DICT)
+        words = []
+        for i, t in enumerate(d["text"]):
+            t = t.strip()
+            if not t or float(d["conf"][i]) < cfg["thresholds"]["ocr_min_conf"]:
+                continue
+            x, y, w, h = d["left"][i] / f + X0, d["top"][i] / f + Y0, d["width"][i] / f, d["height"][i] / f
+            words.append(_mk_word(*frame.box(x, y, x + w, y + h), t, float(d["conf"][i])))
+        import numpy as np
+        proj = (vmask[y0:y1, x0:x1] > 0).sum(axis=0)
+        xs = np.where(proj > 0.6 * (y1 - y0))[0]                       # columns where a vertical rule spans most of the table height
+        groups = []
+        for x in xs:
+            if groups and x - groups[-1][-1] <= 6:
+                groups[-1].append(x)
+            else:
+                groups.append([x])
+        grid_x = [frame.pt(x0 + float(np.mean(g)), (y0 + y1) / 2)[0] for g in groups]
+        return words, frame.box(X0, Y0, X1, Y1), grid_x
+    except Exception:
+        return [], None, []
 
 
 # ------------------------------------------------------------------------------ table from words
@@ -479,6 +558,39 @@ def infer_grid_header(words, grid_x):
     return [header_word(0, "item"), header_word(description_i, "description"), header_word(qty_i, "qty")]
 
 
+def parse_table_fallback(words, cfg):
+    """Fallback table parser when standard header matching fails."""
+    lines = group_lines(words)
+    if len(lines) < 2:
+        return None
+    candidate_rows = []
+    for L in lines:
+        txts = [w["text"].strip() for w in L["words"]]
+        if not txts:
+            continue
+        first = txts[0]
+        if ITEM_RE.match(first) and len(L["words"]) >= 2:
+            rid = first
+            rest_words = L["words"][1:]
+            desc = " ".join(w["text"] for w in rest_words if not w["text"].isdigit())
+            qty_word = next((w["text"] for w in rest_words if w["text"].isdigit()), "1")
+            x0 = min(w["x0"] for w in L["words"])
+            x1 = max(w["x1"] for w in L["words"])
+            y0 = min(w["y0"] for w in L["words"])
+            y1 = max(w["y1"] for w in L["words"])
+            candidate_rows.append(dict(id=rid, id_inferred=False, description=desc or "Part", material="",
+                                       size="", qty=qty_word, partno="", remarks="",
+                                       bbox=(x0 - 2, y0 - 1.5, x1 + 2, y1 + 1.5), conf=100.0))
+    if len(candidate_rows) >= 2:
+        tbl_x0 = min(r["bbox"][0] for r in candidate_rows)
+        tbl_y0 = min(r["bbox"][1] for r in candidate_rows)
+        tbl_x1 = max(r["bbox"][2] for r in candidate_rows)
+        tbl_y1 = max(r["bbox"][3] for r in candidate_rows)
+        return dict(columns=["item", "description", "qty"], rows=candidate_rows,
+                    header_bbox=(tbl_x0, max(0, tbl_y0 - 15), tbl_x1, tbl_y0))
+    return None
+
+
 # ------------------------------------------------------------------------------ balloons
 def vector_balloons(page, words):
     out, seen = [], set()
@@ -503,33 +615,40 @@ def vector_balloons(page, words):
 
 def scan_balloons(img, frame, cfg):
     """Hough circles + digit OCR inside each circle (scanned drawings)."""
-    import cv2, numpy as np, pytesseract
-    z = frame.z
-    blur = cv2.GaussianBlur(img, (5, 5), 1.2)
-    rmin, rmax = int(7 * z), int(12 * z)
-    circles = cv2.HoughCircles(blur, cv2.HOUGH_GRADIENT, dp=1.2, minDist=int(14 * z), param1=120, param2=22, minRadius=rmin, maxRadius=rmax)
-    out = []
-    if circles is None:
+    tess = _get_tesseract()
+    if not tess or img is None:
+        return []
+    try:
+        import cv2, numpy as np, pytesseract
+        pytesseract.pytesseract.tesseract_cmd = tess
+        z = frame.z
+        blur = cv2.GaussianBlur(img, (5, 5), 1.2)
+        rmin, rmax = int(7 * z), int(12 * z)
+        circles = cv2.HoughCircles(blur, cv2.HOUGH_GRADIENT, dp=1.2, minDist=int(14 * z), param1=120, param2=22, minRadius=rmin, maxRadius=rmax)
+        out = []
+        if circles is None:
+            return out
+        inv = 255 - img
+        for x, y, r in np.round(circles[0]).astype(int):
+            ang = np.linspace(0, 2 * np.pi, 48, endpoint=False)
+            px = np.clip((x + r * np.cos(ang)).astype(int), 0, img.shape[1] - 1)
+            py = np.clip((y + r * np.sin(ang)).astype(int), 0, img.shape[0] - 1)
+            ring = np.array([inv[max(0, yy - 2):yy + 3, max(0, xx - 2):xx + 3].max() for xx, yy in zip(px, py)])
+            if (ring > 80).mean() < 0.8:                         # a drawn balloon has a (nearly) closed ring
+                continue
+            m = int(r * 0.72)
+            crop = img[max(0, y - m):y + m, max(0, x - m):x + m]
+            if crop.size == 0:
+                continue
+            crop = cv2.resize(crop, None, fx=3, fy=3, interpolation=cv2.INTER_CUBIC)
+            _, bw = cv2.threshold(crop, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
+            bw = cv2.copyMakeBorder(bw, 20, 20, 20, 20, cv2.BORDER_CONSTANT, value=255)
+            txt = pytesseract.image_to_string(bw, config="--psm 7 -c tessedit_char_whitelist=0123456789").strip()
+            if ITEM_RE.match(txt):
+                out.append(dict(id=txt, bbox=frame.box(x - r, y - r, x + r, y + r), conf=60.0))
         return out
-    inv = 255 - img
-    for x, y, r in np.round(circles[0]).astype(int):
-        ang = np.linspace(0, 2 * np.pi, 48, endpoint=False)
-        px = np.clip((x + r * np.cos(ang)).astype(int), 0, img.shape[1] - 1)
-        py = np.clip((y + r * np.sin(ang)).astype(int), 0, img.shape[0] - 1)
-        ring = np.array([inv[max(0, yy - 2):yy + 3, max(0, xx - 2):xx + 3].max() for xx, yy in zip(px, py)])
-        if (ring > 80).mean() < 0.8:                         # a drawn balloon has a (nearly) closed ring
-            continue
-        m = int(r * 0.72)
-        crop = img[max(0, y - m):y + m, max(0, x - m):x + m]
-        if crop.size == 0:
-            continue
-        crop = cv2.resize(crop, None, fx=3, fy=3, interpolation=cv2.INTER_CUBIC)
-        _, bw = cv2.threshold(crop, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
-        bw = cv2.copyMakeBorder(bw, 20, 20, 20, 20, cv2.BORDER_CONSTANT, value=255)
-        txt = pytesseract.image_to_string(bw, config="--psm 7 -c tessedit_char_whitelist=0123456789").strip()
-        if ITEM_RE.match(txt):
-            out.append(dict(id=txt, bbox=frame.box(x - r, y - r, x + r, y + r), conf=60.0))
-    return out
+    except Exception:
+        return []
 
 
 # ------------------------------------------------------------------------------ drawing
@@ -543,19 +662,24 @@ def read_drawing(path, cfg):
         tw, grid_x = [], None
         if scanned:
             scanned_any = True
-            img0, z = render_gray(page, cfg["ocr"]["dpi"])
-            img, frame, skew = preprocess_scan(img0, z)
-            words = ocr_words(img, frame, cfg)
-            tw, region, grid_x = ocr_table_words(img, frame, cfg)
-            if tw:                                           # trust the block-OCR inside the table region
-                rx0, ry0, rx1, ry1 = region
-                words = [w for w in words if not (rx0 <= w["xc"] <= rx1 and ry0 <= w["yc"] <= ry1)] + tw
+            try:
+                img0, z = render_gray(page, cfg["ocr"]["dpi"])
+                img, frame, skew = preprocess_scan(img0, z)
+                words = ocr_words(img, frame, cfg) or words
+                tw, region, grid_x = ocr_table_words(img, frame, cfg)
+                if tw:                                           # trust the block-OCR inside the table region
+                    rx0, ry0, rx1, ry1 = region
+                    words = [w for w in words if not (rx0 <= w["xc"] <= rx1 and ry0 <= w["yc"] <= ry1)] + tw
+            except Exception:
+                pass
         table = parse_table(words, cfg, region_left=(region[0] if scanned and tw else None), fuzzy=scanned, grid_x=(grid_x if scanned and tw else None))
         if table is None and scanned and tw and grid_x:
             synthetic_header = infer_grid_header(tw, grid_x)
             if synthetic_header:
                 table_words = [w for w in words if region and region[0] <= w["xc"] <= region[2] and region[1] <= w["yc"] <= region[3]]
                 table = parse_table(table_words + synthetic_header, cfg, region_left=region[0], fuzzy=True, grid_x=grid_x)
+        if table is None:
+            table = parse_table_fallback(words, cfg)
         balloons = scan_balloons(img, frame, cfg) if scanned else vector_balloons(page, words)
         text = " ".join(w["text"] for w in sorted(words, key=lambda w: (round(w["yc"] / 4), w["x0"])))
         pages.append(dict(page=pno, scanned=scanned, table=table, balloons=balloons, text=text, words=words,

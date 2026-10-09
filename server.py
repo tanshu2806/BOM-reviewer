@@ -91,9 +91,11 @@ def run_bom_check():
                 quiet=True
             )
         except SystemExit as se:
-            return jsonify({"status": "error", "message": str(se)}), 422
+            return jsonify({"status": "error", "message": str(se)}), 200
         except Exception as ex:
-            return jsonify({"status": "error", "message": f"Pipeline execution failed: {str(ex)}"}), 500
+            import traceback
+            traceback.print_exc()
+            return jsonify({"status": "error", "message": f"Pipeline execution failed: {str(ex)}"}), 200
 
         stem = drawing_path.stem
         annotated_pdf = out_dir / f"{stem}_annotated.pdf"

@@ -13,14 +13,18 @@
       "pos",
       "position",
       "mark",
-      "no"
+      "no",
+      "no.",
+      "no ."
     ],
     "description": [
       "part description",
       "item description",
       "description",
       "desc",
-      "name"
+      "name",
+      "part name",
+      "part"
     ],
     "material": [
       "material spec",
@@ -31,6 +35,8 @@
       "spec"
     ],
     "size": [
+      "size / specification",
+      "size/specification",
       "dimensions",
       "dimension",
       "size",
@@ -40,8 +46,10 @@
       "req qty",
       "quantity",
       "qty",
+      "qty.",
       "nos",
-      "no. off"
+      "no. off",
+      "off"
     ],
     "uom": [
       "uom",
@@ -53,12 +61,18 @@
       "drg no",
       "drg. no.",
       "drg ref",
+      "drg. ref.",
       "dwg no",
       "drawing no"
     ],
     "remarks": [
       "remarks",
-      "remark"
+      "remark",
+      "wt.",
+      "wt. (kg)",
+      "wt",
+      "weight",
+      "class/rule"
     ]
   },
   "abbreviations": {

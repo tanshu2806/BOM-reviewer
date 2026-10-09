@@ -39,50 +39,95 @@ def _label(iss):
 
 
 # ------------------------------------------------------------------------------ annotated PDF
+# ------------------------------------------------------------------------------ annotated PDF
 def annotate_pdf(src, dst, drawing, result, meta):
     doc = fitz.open(src)
     by_page = {}
     for iss in result["issues"]:
-        if iss.get("bbox") is not None and iss.get("page") is not None:
+        if iss.get("page") is not None:
             by_page.setdefault(iss["page"], []).append(iss)
-    balloons = {}
+        elif iss.get("bbox") is not None:
+            by_page.setdefault(0, []).append(iss)
+
+    # Build balloon lookup map across pages by normalized string ID
+    balloons_by_page = {}
     for p in drawing["pages"]:
+        pno = p["page"]
         for b in p["balloons"]:
-            balloons[(p["page"], b["id"])] = b["bbox"]
+            bid = str(b.get("id", "")).strip()
+            if bid:
+                balloons_by_page.setdefault((pno, bid), []).append(b["bbox"])
+                balloons_by_page.setdefault(bid, []).append((pno, b["bbox"]))
 
     for pno, page in enumerate(doc):
+        pw, ph = page.rect.width, page.rect.height
         sh = page.new_shape()
         labels = []
-        for iss in sorted(by_page.get(pno, []), key=lambda i: -SEV_ORDER[i["severity"]]):
+        page_words = drawing["pages"][pno]["words"] if pno < len(drawing["pages"]) else []
+        tbl_bbox = drawing["pages"][pno]["table"]["header_bbox"] if (pno < len(drawing["pages"]) and drawing["pages"][pno]["table"]) else None
+
+        for iss in sorted(result["issues"], key=lambda i: -SEV_ORDER[i["severity"]]):
+            iss_pno = iss.get("page", 0)
+            did = str(iss.get("drawing_id") or "").strip()
             col = RGB[iss["severity"]]
-            r = fitz.Rect(iss["bbox"])
-            sh.draw_rect(r)
-            sh.finish(color=col, fill=col, width=1.4, fill_opacity=0.22, stroke_opacity=1)
-            labels.append((r, col, _label(iss), iss["type"] in ("implied",)))
-            if iss["type"] == "omission" and (pno, iss["drawing_id"]) in balloons:      # also circle the balloon on the sheet
-                br = fitz.Rect(balloons[(pno, iss["drawing_id"])]) + (-3, -3, 3, 3)
-                sh.draw_oval(br)
-                sh.finish(color=col, fill=col, width=2.0, fill_opacity=0.25, stroke_opacity=1)
+            lbl = _label(iss)
+
+            # 1. Highlight table row if issue has bbox and is on this page
+            if iss_pno == pno and iss.get("bbox") is not None:
+                bx0, by0, bx1, by1 = iss["bbox"]
+                if bx0 < 1e7 and by0 < 1e7 and bx1 > bx0 and by1 > by0:
+                    r = fitz.Rect(bx0, by0, bx1, by1)
+                    sh.draw_rect(r)
+                    sh.finish(color=col, fill=col, width=1.8, fill_opacity=0.28, stroke_opacity=1.0)
+                    labels.append((r, col, lbl, iss["type"] in ("implied",)))
+
+            # 2. Highlight Balloon Callouts on Drawing Diagram for EVERY issue with a drawing_id
+            if did:
+                matched_balloons = balloons_by_page.get((pno, did), [])
+                if not matched_balloons and did in balloons_by_page:
+                    matched_balloons = [box for (p, box) in balloons_by_page[did] if p == pno]
+                
+                for b_box in matched_balloons:
+                    br = fitz.Rect(b_box) + (-4, -4, 4, 4)
+                    sh.draw_oval(br)
+                    sh.finish(color=col, fill=col, width=2.5, fill_opacity=0.35, stroke_opacity=1.0)
+                    labels.append((br, col, f"Item {did}: {lbl}", True))
+
+                # 3. Highlight standalone text matching item ID on drawing diagram (outside parts table)
+                if not matched_balloons and page_words:
+                    for w in page_words:
+                        if str(w["text"]).strip() == did:
+                            if tbl_bbox and (tbl_bbox[0] - 5 <= w["xc"] <= tbl_bbox[2] + 5 and tbl_bbox[1] - 5 <= w["yc"] <= tbl_bbox[3] + 500):
+                                continue
+                            wr = fitz.Rect(w["x0"] - 3, w["y0"] - 2, w["x1"] + 3, w["y1"] + 2)
+                            sh.draw_rect(wr)
+                            sh.finish(color=col, fill=col, width=2.0, fill_opacity=0.35, stroke_opacity=1.0)
+                            labels.append((wr, col, f"Item {did}: {lbl}", True))
+
         sh.commit()
+
+        # Place label text boxes
         for r, col, text, right_side in labels:
-            w = max(60, 4.1 * len(text) + 6)
-            if right_side:                                   # notes: label goes after the END of that note line (free space)
-                same = [x for x in drawing["pages"][pno]["words"] if abs(x["yc"] - (r.y0 + r.y1) / 2) < 3.5]
-                xend = max([x["x1"] for x in same] + [r.x1]) + 8
-                page.insert_text((xend, r.y1 - 1.5), "<- " + text, fontsize=6.8, fontname="hebo", color=col)
-                continue
+            w = max(70, 4.2 * len(text) + 6)
+            if right_side:
+                xend = min(pw - w - 10, r.x1 + 8)
+                if xend < r.x1:
+                    xend = max(10, r.x0 - w - 8)
+                box = fitz.Rect(xend, max(5, r.y0 - 2), min(pw - 5, xend + w), min(ph - 5, r.y0 + 12))
+                page.insert_textbox(box, text, fontsize=6.8, fontname="hebo", color=col, align=0)
             else:
                 box = fitz.Rect(r.x0 - w - 4, r.y0 - 1, r.x0 - 4, r.y1 + 1)
-            if (box.x0 < 5 or box.x1 > page.rect.width - 5) and not right_side:         # keep on the page
-                box = fitz.Rect(r.x0, r.y1 + 1, r.x0 + w, r.y1 + 11)
-            page.insert_textbox(box, text, fontsize=6.5, fontname="helv", color=col, align=0 if right_side else 2)
-        # legend
+                if box.x0 < 5 or box.x1 > pw - 5:
+                    box = fitz.Rect(max(5, r.x0), min(ph - 15, r.y1 + 1), min(pw - 5, r.x0 + w), min(ph - 2, r.y1 + 11))
+                page.insert_textbox(box, text, fontsize=6.5, fontname="helv", color=col, align=2)
+
+        # Draw Legend Banner
         x, y = 28, 26
         banner = result["reliability"] != "HIGH"
-        page.draw_rect(fitz.Rect(x - 4, y - 4, x + 250, y + (80 if banner else 62)), color=(0.3, 0.3, 0.3), fill=(1, 1, 1), width=0.6)
+        page.draw_rect(fitz.Rect(x - 4, y - 4, x + 270, y + (84 if banner else 66)), color=(0.3, 0.3, 0.3), fill=(1, 1, 1), width=0.6)
         if banner:
             bc = (0.85, 0, 0) if result["reliability"] == "LOW" else (0.9, 0.5, 0)
-            page.insert_text((x, y + 74), f"RUN RELIABILITY: {result['reliability']} - " + ("DO NOT RELY ON THIS RUN" if result["reliability"] == "LOW" else "review flags with care"),
+            page.insert_text((x, y + 78), f"RUN RELIABILITY: {result['reliability']} - " + ("DO NOT RELY ON THIS RUN" if result["reliability"] == "LOW" else "review flags with care"),
                              fontsize=7, fontname="hebo", color=bc)
         page.insert_text((x, y + 6), "BOM CHECK  (automated - verify before acting)", fontsize=6.5, fontname="hebo", color=(0, 0, 0))
         for k, (name, c) in enumerate([("red = on drawing, missing in BOM", "red"), ("orange = qty / spec / revision mismatch", "orange"),
